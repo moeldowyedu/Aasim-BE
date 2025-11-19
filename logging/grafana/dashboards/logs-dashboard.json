@@ -1,0 +1,135 @@
+{
+  "dashboard": {
+    "title": "Aasim AI - Centralized Logs",
+    "tags": ["aasim", "logs", "loki"],
+    "timezone": "UTC",
+    "schemaVersion": 38,
+    "panels": [
+      {
+        "id": 1,
+        "title": "Log Volume Over Time",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 0, "w": 24, "h": 8},
+        "targets": [
+          {
+            "expr": "sum(rate({app=\"aasim-ai\"}[1m])) by (level)",
+            "legendFormat": "{{level}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "showBars": true,
+          "showLines": false
+        }
+      },
+      {
+        "id": 2,
+        "title": "Recent Logs",
+        "type": "logs",
+        "gridPos": {"x": 0, "y": 8, "w": 24, "h": 12},
+        "targets": [
+          {
+            "expr": "{app=\"aasim-ai\"}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "showTime": true,
+          "showLabels": true,
+          "showCommonLabels": false,
+          "wrapLogMessage": true,
+          "prettifyLogMessage": true,
+          "enableLogDetails": true,
+          "dedupStrategy": "none",
+          "sortOrder": "Descending"
+        }
+      },
+      {
+        "id": 3,
+        "title": "Error Logs",
+        "type": "logs",
+        "gridPos": {"x": 0, "y": 20, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "{app=\"aasim-ai\", level=\"error\"}",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Warning Logs",
+        "type": "logs",
+        "gridPos": {"x": 12, "y": 20, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "{app=\"aasim-ai\", level=\"warning\"}",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Logs by Category",
+        "type": "piechart",
+        "gridPos": {"x": 0, "y": 28, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "sum by (category) (count_over_time({app=\"aasim-ai\"}[1h]))",
+            "legendFormat": "{{category}}",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Logs by Level",
+        "type": "piechart",
+        "gridPos": {"x": 12, "y": 28, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "sum by (level) (count_over_time({app=\"aasim-ai\"}[1h]))",
+            "legendFormat": "{{level}}",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Database Logs",
+        "type": "logs",
+        "gridPos": {"x": 0, "y": 36, "w": 24, "h": 10},
+        "targets": [
+          {
+            "expr": "{app=\"aasim-ai\", category=\"database\"}",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Queue Logs",
+        "type": "logs",
+        "gridPos": {"x": 0, "y": 46, "w": 24, "h": 10},
+        "targets": [
+          {
+            "expr": "{app=\"aasim-ai\", category=\"queue\"}",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Security Logs",
+        "type": "logs",
+        "gridPos": {"x": 0, "y": 56, "w": 24, "h": 10},
+        "targets": [
+          {
+            "expr": "{app=\"aasim-ai\", category=\"security\"}",
+            "refId": "A"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,126 @@
+version: '3.8'
+
+services:
+  # Loki - Log aggregation system
+  loki:
+    image: grafana/loki:latest
+    container_name: aasim-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./logging/loki/loki-config.yml:/etc/loki/loki-config.yml
+      - loki-data:/loki
+    command: -config.file=/etc/loki/loki-config.yml
+    networks:
+      - logging
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Promtail - Log collector and shipper
+  promtail:
+    image: grafana/promtail:latest
+    container_name: aasim-promtail
+    volumes:
+      - ./logging/promtail/promtail-config.yml:/etc/promtail/promtail-config.yml
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ./storage/logs:/app/storage/logs:ro  # Laravel logs
+    command: -config.file=/etc/promtail/promtail-config.yml
+    networks:
+      - logging
+    depends_on:
+      - loki
+    restart: unless-stopped
+
+  # Grafana (if not already running from monitoring stack)
+  grafana-logs:
+    image: grafana/grafana:latest
+    container_name: aasim-grafana-logs
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_INSTALL_PLUGINS=grafana-loki-datasource
+    volumes:
+      - grafana-logs-data:/var/lib/grafana
+      - ./logging/grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./logging/grafana/dashboards:/etc/grafana/provisioning/dashboards
+    ports:
+      - "3001:3000"
+    networks:
+      - logging
+    depends_on:
+      - loki
+    restart: unless-stopped
+
+  # Elasticsearch (alternative to Loki)
+  # elasticsearch:
+  #   image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+  #   container_name: aasim-elasticsearch
+  #   environment:
+  #     - discovery.type=single-node
+  #     - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+  #     - xpack.security.enabled=false
+  #   volumes:
+  #     - elasticsearch-data:/usr/share/elasticsearch/data
+  #   ports:
+  #     - "9200:9200"
+  #   networks:
+  #     - logging
+  #   restart: unless-stopped
+
+  # Logstash (alternative to Promtail)
+  # logstash:
+  #   image: docker.elastic.co/logstash/logstash:8.11.0
+  #   container_name: aasim-logstash
+  #   volumes:
+  #     - ./logging/logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+  #     - ./storage/logs:/app/logs:ro
+  #   ports:
+  #     - "5044:5044"  # Beats
+  #     - "9600:9600"  # API
+  #   networks:
+  #     - logging
+  #   depends_on:
+  #     - elasticsearch
+  #   restart: unless-stopped
+
+  # Kibana (alternative to Grafana for Elasticsearch)
+  # kibana:
+  #   image: docker.elastic.co/kibana/kibana:8.11.0
+  #   container_name: aasim-kibana
+  #   environment:
+  #     - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+  #   ports:
+  #     - "5601:5601"
+  #   networks:
+  #     - logging
+  #   depends_on:
+  #     - elasticsearch
+  #   restart: unless-stopped
+
+  # Fluentd (alternative log collector)
+  # fluentd:
+  #   image: fluent/fluentd:latest
+  #   container_name: aasim-fluentd
+  #   volumes:
+  #     - ./logging/fluentd/fluent.conf:/fluentd/etc/fluent.conf
+  #     - ./storage/logs:/app/logs:ro
+  #   ports:
+  #     - "24224:24224"
+  #     - "24224:24224/udp"
+  #   networks:
+  #     - logging
+  #   restart: unless-stopped
+
+networks:
+  logging:
+    driver: bridge
+
+volumes:
+  loki-data:
+  grafana-logs-data:
+  # elasticsearch-data:

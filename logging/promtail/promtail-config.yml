@@ -1,0 +1,177 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+  log_level: info
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # Laravel Application Logs
+  - job_name: laravel
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: laravel
+          app: aasim-ai
+          environment: production
+          __path__: /app/storage/logs/*.log
+
+    pipeline_stages:
+      # Parse Laravel log format
+      - regex:
+          expression: '^\[(?P<timestamp>.*?)\] (?P<environment>\w+)\.(?P<level>\w+): (?P<message>.*?)(?P<context>\{.*\})?$'
+
+      # Extract JSON context if present
+      - json:
+          expressions:
+            trace_id: trace_id
+            tenant_id: tenant_id
+            user_id: user_id
+            category: category
+          source: context
+
+      # Set labels from extracted fields
+      - labels:
+          level:
+          environment:
+          trace_id:
+          category:
+
+      # Parse timestamp
+      - timestamp:
+          source: timestamp
+          format: '2006-01-02 15:04:05'
+
+  # System Logs
+  - job_name: system
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: system
+          __path__: /var/log/syslog
+
+  # Docker Container Logs
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+        filters:
+          - name: label
+            values:
+              - com.docker.compose.project=aasim
+
+    relabel_configs:
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/(.*)'
+        target_label: 'container'
+      - source_labels: ['__meta_docker_container_log_stream']
+        target_label: 'stream'
+
+    pipeline_stages:
+      # Parse JSON logs from Docker
+      - json:
+          expressions:
+            output: log
+            stream: stream
+            time: time
+
+      # Extract structured log fields if present
+      - json:
+          expressions:
+            level: level
+            message: message
+            trace_id: trace_id
+            tenant_id: tenant_id
+          source: output
+
+      - labels:
+          stream:
+          level:
+
+  # Nginx Access Logs
+  - job_name: nginx-access
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: nginx-access
+          __path__: /var/log/nginx/access.log
+
+    pipeline_stages:
+      # Parse nginx access log format
+      - regex:
+          expression: '^(?P<remote_addr>[\w\.]+) - (?P<remote_user>[^ ]*) \[(?P<time_local>.*?)\] "(?P<method>\S+) (?P<request>\S+) (?P<protocol>\S+)" (?P<status>\d+) (?P<body_bytes_sent>\d+) "(?P<http_referer>[^"]*)" "(?P<http_user_agent>[^"]*)" "(?P<http_x_forwarded_for>[^"]*)"'
+
+      - labels:
+          method:
+          status:
+
+      - timestamp:
+          source: time_local
+          format: '02/Jan/2006:15:04:05 -0700'
+
+  # Nginx Error Logs
+  - job_name: nginx-error
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: nginx-error
+          __path__: /var/log/nginx/error.log
+
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<timestamp>\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}) \[(?P<level>\w+)\] (?P<message>.*)'
+
+      - labels:
+          level:
+
+      - timestamp:
+          source: timestamp
+          format: '2006/01/02 15:04:05'
+
+  # PostgreSQL Logs
+  - job_name: postgresql
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: postgresql
+          __path__: /var/log/postgresql/*.log
+
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} \w+) \[(?P<pid>\d+)\]: \[(?P<line>\d+)-(?P<session_id>.*?)\] user=(?P<user>.*?),db=(?P<db>.*?),app=(?P<app>.*?),client=(?P<client>.*?) (?P<level>\w+): (?P<message>.*)'
+
+      - labels:
+          level:
+          db:
+          user:
+
+      - timestamp:
+          source: timestamp
+          format: '2006-01-02 15:04:05.000 MST'
+
+  # Queue Worker Logs
+  - job_name: queue-worker
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: queue-worker
+          __path__: /app/storage/logs/worker*.log
+
+  # Cron/Scheduled Tasks Logs
+  - job_name: scheduler
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: scheduler
+          __path__: /app/storage/logs/scheduler*.log

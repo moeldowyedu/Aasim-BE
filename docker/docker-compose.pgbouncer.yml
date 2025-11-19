@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: aasim-postgres
+    environment:
+      POSTGRES_DB: aasim_ai
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=en_US.UTF-8"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - aasim-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+
+  # PgBouncer Connection Pooler
+  pgbouncer:
+    image: pgbouncer/pgbouncer:latest
+    container_name: aasim-pgbouncer
+    environment:
+      DATABASES: aasim_ai=host=postgres port=5432 dbname=aasim_ai
+      PGBOUNCER_AUTH_TYPE: md5
+      PGBOUNCER_AUTH_FILE: /etc/pgbouncer/userlist.txt
+      PGBOUNCER_POOL_MODE: transaction
+      PGBOUNCER_MAX_CLIENT_CONN: 1000
+      PGBOUNCER_DEFAULT_POOL_SIZE: 25
+      PGBOUNCER_MIN_POOL_SIZE: 10
+      PGBOUNCER_RESERVE_POOL_SIZE: 5
+      PGBOUNCER_SERVER_IDLE_TIMEOUT: 600
+      PGBOUNCER_LOG_CONNECTIONS: 1
+      PGBOUNCER_LOG_DISCONNECTIONS: 1
+      PGBOUNCER_LOG_POOLER_ERRORS: 1
+      PGBOUNCER_STATS_PERIOD: 60
+    volumes:
+      - ./pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini
+      - ./pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt
+      - pgbouncer-logs:/var/log/pgbouncer
+    ports:
+      - "6432:6432"  # PgBouncer port
+    networks:
+      - aasim-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "psql", "-h", "localhost", "-p", "6432", "-U", "postgres", "-c", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # PgBouncer Exporter for Prometheus
+  pgbouncer-exporter:
+    image: prometheuscommunity/pgbouncer-exporter:latest
+    container_name: aasim-pgbouncer-exporter
+    environment:
+      PGBOUNCER_HOST: pgbouncer
+      PGBOUNCER_PORT: 6432
+      PGBOUNCER_USER: postgres
+      PGBOUNCER_PASS: ${DB_PASSWORD:-secret}
+      PGBOUNCER_EXPORTER_HOST: 0.0.0.0
+      PGBOUNCER_EXPORTER_PORT: 9127
+    ports:
+      - "9127:9127"
+    networks:
+      - aasim-network
+    depends_on:
+      - pgbouncer
+    restart: unless-stopped
+
+networks:
+  aasim-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  pgbouncer-logs:

@@ -1,0 +1,18 @@
+# PgBouncer User List
+# Format: "username" "password"
+# Password must be MD5 hashed: md5 + md5(password + username)
+#
+# Example for user 'postgres' with password 'password':
+# echo -n "passwordpostgres" | md5sum  (get hash)
+# Then: md5{hash}
+#
+# Generate with: echo "md5`echo -n 'passwordusername' | md5sum | cut -d' ' -f1`"
+
+# Default user (update with your actual credentials)
+"postgres" "SCRAM-SHA-256$4096:salt$hash:hash"
+
+# Application user
+"aasim_user" "SCRAM-SHA-256$4096:salt$hash:hash"
+
+# Read-only user
+"aasim_readonly" "SCRAM-SHA-256$4096:salt$hash:hash"

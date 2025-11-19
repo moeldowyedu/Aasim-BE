@@ -1,0 +1,188 @@
+# Horizontal Pod Autoscaler for Aasim AI Application
+# Scales based on CPU, Memory, and Custom Metrics
+
+---
+# API Server HPA
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: aasim-api-hpa
+  namespace: production
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: aasim-api
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+    # CPU-based scaling
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+
+    # Memory-based scaling
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+    # Custom metric: Request rate (requires Prometheus adapter)
+    - type: Pods
+      pods:
+        metric:
+          name: http_requests_per_second
+        target:
+          type: AverageValue
+          averageValue: "1000"
+
+    # Custom metric: Response time
+    - type: Pods
+      pods:
+        metric:
+          name: http_request_duration_seconds
+        target:
+          type: AverageValue
+          averageValue: "0.5"
+
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300  # Wait 5 minutes before scaling down
+      policies:
+        - type: Percent
+          value: 50  # Scale down max 50% of pods at a time
+          periodSeconds: 60
+        - type: Pods
+          value: 2  # Or max 2 pods at a time
+          periodSeconds: 60
+      selectPolicy: Min  # Use the most conservative policy
+
+    scaleUp:
+      stabilizationWindowSeconds: 0  # Scale up immediately
+      policies:
+        - type: Percent
+          value: 100  # Double the pods
+          periodSeconds: 30
+        - type: Pods
+          value: 4  # Or add 4 pods at a time
+          periodSeconds: 30
+      selectPolicy: Max  # Use the most aggressive policy
+
+---
+# Queue Worker HPA
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: aasim-queue-worker-hpa
+  namespace: production
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: aasim-queue-worker
+  minReplicas: 2
+  maxReplicas: 15
+  metrics:
+    # CPU-based scaling
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 75
+
+    # Memory-based scaling
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 85
+
+    # Custom metric: Queue size (requires external metrics)
+    - type: External
+      external:
+        metric:
+          name: queue_default_size
+          selector:
+            matchLabels:
+              queue_name: default
+        target:
+          type: AverageValue
+          averageValue: "100"  # Scale when queue has >100 jobs per worker
+
+    # High priority queue
+    - type: External
+      external:
+        metric:
+          name: queue_high_size
+          selector:
+            matchLabels:
+              queue_name: high
+        target:
+          type: AverageValue
+          averageValue: "50"  # More aggressive scaling for high priority
+
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 600  # Wait 10 minutes before scaling down workers
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 120
+
+    scaleUp:
+      stabilizationWindowSeconds: 30  # Quick scale up for queue processing
+      policies:
+        - type: Pods
+          value: 3
+          periodSeconds: 30
+
+---
+# Scheduler HPA (less aggressive, more stable)
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: aasim-scheduler-hpa
+  namespace: production
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: aasim-scheduler
+  minReplicas: 2  # Always have 2 for high availability
+  maxReplicas: 4  # Don't need many schedulers
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60
+
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 70
+
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 900  # Very conservative scale down
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 300
+
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60

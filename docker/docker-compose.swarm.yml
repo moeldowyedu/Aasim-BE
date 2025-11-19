@@ -1,0 +1,218 @@
+# Docker Swarm Stack for Aasim AI with Auto-scaling
+# Deploy with: docker stack deploy -c docker-compose.swarm.yml aasim
+
+version: '3.8'
+
+services:
+  # API Service with auto-scaling
+  api:
+    image: aasim/api:latest
+    deploy:
+      mode: replicated
+      replicas: 3
+
+      # Auto-scaling configuration
+      placement:
+        max_replicas_per_node: 2
+        constraints:
+          - node.role == worker
+          - node.labels.tier == backend
+
+      # Update configuration for zero-downtime
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+        failure_action: rollback
+
+      rollback_config:
+        parallelism: 1
+        delay: 5s
+
+      # Resource limits (critical for auto-scaling)
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 256M
+
+      # Restart policy
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+      # Health check
+      healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+        interval: 10s
+        timeout: 5s
+        retries: 3
+        start_period: 40s
+
+      labels:
+        # Traefik labels for load balancing
+        - "traefik.enable=true"
+        - "traefik.http.routers.api.rule=Host(`api.aasim.ai`)"
+        - "traefik.http.services.api.loadbalancer.server.port=8000"
+        - "traefik.http.services.api.loadbalancer.healthcheck.path=/api/health"
+        - "traefik.http.services.api.loadbalancer.healthcheck.interval=10s"
+
+        # Prometheus metrics
+        - "prometheus.job=aasim-api"
+        - "prometheus.port=8000"
+        - "prometheus.path=/api/metrics"
+
+    ports:
+      - "8000:8000"
+
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      CACHE_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      SESSION_DRIVER: redis
+
+    secrets:
+      - db_password
+      - redis_password
+      - app_key
+
+    networks:
+      - aasim-network
+
+    volumes:
+      - storage-data:/var/www/html/storage
+
+  # Queue Worker Service with job-based scaling
+  queue-worker:
+    image: aasim/api:latest
+    command: php artisan queue:work redis --sleep=3 --tries=3 --max-time=3600
+    deploy:
+      mode: replicated
+      replicas: 2
+
+      placement:
+        constraints:
+          - node.role == worker
+          - node.labels.tier == worker
+
+      update_config:
+        parallelism: 1
+        delay: 10s
+
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.3'
+          memory: 512M
+
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+
+      labels:
+        - "prometheus.job=aasim-queue-worker"
+
+    environment:
+      APP_ENV: production
+      QUEUE_CONNECTION: redis
+
+    secrets:
+      - db_password
+      - redis_password
+
+    networks:
+      - aasim-network
+
+  # Scheduler Service (2 replicas for HA)
+  scheduler:
+    image: aasim/api:latest
+    command: php artisan schedule:work
+    deploy:
+      mode: replicated
+      replicas: 2
+
+      placement:
+        constraints:
+          - node.role == worker
+
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+      restart_policy:
+        condition: on-failure
+
+    environment:
+      APP_ENV: production
+
+    secrets:
+      - db_password
+
+    networks:
+      - aasim-network
+
+  # Traefik Load Balancer with auto-scaling support
+  traefik:
+    image: traefik:v2.10
+    deploy:
+      mode: global  # Run on all manager nodes
+      placement:
+        constraints:
+          - node.role == manager
+
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 256M
+
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Traefik dashboard
+
+    command:
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.swarmMode=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--metrics.prometheus=true"
+      - "--metrics.prometheus.buckets=0.1,0.3,1.2,5.0"
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+    networks:
+      - aasim-network
+
+networks:
+  aasim-network:
+    driver: overlay
+    attachable: true
+
+volumes:
+  storage-data:
+
+secrets:
+  db_password:
+    external: true
+  redis_password:
+    external: true
+  app_key:
+    external: true

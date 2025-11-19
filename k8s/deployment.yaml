@@ -1,0 +1,232 @@
+# Kubernetes Deployment for Aasim AI Application
+# Includes resource requests/limits for auto-scaling
+
+---
+# API Server Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aasim-api
+  namespace: production
+  labels:
+    app: aasim
+    component: api
+    tier: backend
+spec:
+  replicas: 3  # Initial replicas (HPA will manage this)
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0  # Zero downtime deployments
+  selector:
+    matchLabels:
+      app: aasim
+      component: api
+  template:
+    metadata:
+      labels:
+        app: aasim
+        component: api
+        tier: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/api/metrics"
+    spec:
+      containers:
+        - name: aasim-api
+          image: aasim/api:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+
+          # Resource requests and limits (critical for HPA)
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"  # 0.2 CPU cores
+            limits:
+              memory: "512Mi"
+              cpu: "500m"  # 0.5 CPU cores
+
+          # Health checks
+          livenessProbe:
+            httpGet:
+              path: /api/health/alive
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /api/health/ready
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 2
+
+          # Environment variables
+          env:
+            - name: APP_ENV
+              value: "production"
+            - name: APP_DEBUG
+              value: "false"
+            - name: CACHE_DRIVER
+              value: "redis"
+            - name: QUEUE_CONNECTION
+              value: "redis"
+            - name: SESSION_DRIVER
+              value: "redis"
+
+            # Database credentials from secrets
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: aasim-secrets
+                  key: db-host
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: aasim-secrets
+                  key: db-password
+
+            # Redis credentials
+            - name: REDIS_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: aasim-secrets
+                  key: redis-host
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: aasim-secrets
+                  key: redis-password
+
+          # Volume mounts
+          volumeMounts:
+            - name: storage
+              mountPath: /var/www/html/storage
+
+      volumes:
+        - name: storage
+          persistentVolumeClaim:
+            claimName: aasim-storage-pvc
+
+---
+# Queue Worker Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aasim-queue-worker
+  namespace: production
+  labels:
+    app: aasim
+    component: queue-worker
+    tier: worker
+spec:
+  replicas: 2  # Initial replicas (HPA will manage this)
+  selector:
+    matchLabels:
+      app: aasim
+      component: queue-worker
+  template:
+    metadata:
+      labels:
+        app: aasim
+        component: queue-worker
+        tier: worker
+    spec:
+      containers:
+        - name: queue-worker
+          image: aasim/api:latest
+          imagePullPolicy: Always
+          command: ["php", "artisan", "queue:work", "redis", "--sleep=3", "--tries=3", "--max-time=3600"]
+
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "300m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"  # Workers need more CPU for processing
+
+          # Liveness probe (restart if worker is stuck)
+          livenessProbe:
+            exec:
+              command:
+                - php
+                - artisan
+                - queue:health-check
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+
+          env:
+            - name: APP_ENV
+              value: "production"
+            - name: QUEUE_CONNECTION
+              value: "redis"
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: aasim-secrets
+                  key: db-host
+            - name: REDIS_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: aasim-secrets
+                  key: redis-host
+
+---
+# Scheduler Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aasim-scheduler
+  namespace: production
+  labels:
+    app: aasim
+    component: scheduler
+    tier: worker
+spec:
+  replicas: 2  # Run 2 for high availability
+  selector:
+    matchLabels:
+      app: aasim
+      component: scheduler
+  template:
+    metadata:
+      labels:
+        app: aasim
+        component: scheduler
+        tier: worker
+    spec:
+      containers:
+        - name: scheduler
+          image: aasim/api:latest
+          imagePullPolicy: Always
+          command: ["php", "artisan", "schedule:work"]
+
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+
+          env:
+            - name: APP_ENV
+              value: "production"
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: aasim-secrets
+                  key: db-host

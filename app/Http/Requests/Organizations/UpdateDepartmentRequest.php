@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Organizations;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class UpdateTeamRequest extends FormRequest
+class UpdateDepartmentRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -15,11 +15,12 @@ class UpdateTeamRequest extends FormRequest
     {
         return [
             'organization_id' => ['sometimes', 'uuid', 'exists:organizations,id'],
-            'department_id' => ['nullable', 'uuid', 'exists:departments,id'],
-            'project_id' => ['nullable', 'uuid', 'exists:projects,id'],
+            'branch_id' => ['nullable', 'uuid', 'exists:branches,id'],
+            'parent_department_id' => ['nullable', 'uuid', 'exists:departments,id'],
             'name' => ['sometimes', 'string', 'max:255'],
+            'code' => ['sometimes', 'string', 'max:50'],
             'description' => ['nullable', 'string'],
-            'team_lead_id' => ['nullable', 'uuid', 'exists:users,id'],
+            'head_id' => ['nullable', 'uuid', 'exists:users,id'],
             'status' => ['sometimes', 'in:active,inactive'],
         ];
     }

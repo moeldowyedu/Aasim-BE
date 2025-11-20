@@ -3,317 +3,450 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\RegisterRequest;
+use App\Http\Requests\Auth\LoginRequest;
 use App\Models\User;
-use App\Models\Tenant;
+use App\Models\UserActivity;
+use App\Models\UserSession;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Str;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
-/**
- * @OA\Info(
- *     title="Aasim AI API",
- *     version="1.0.0",
- *     description="Complete API documentation for Aasim AI platform",
- *     @OA\Contact(
- *         email="support@aasim.ai"
- *     )
- * )
- *
- * @OA\SecurityScheme(
- *     securityScheme="bearerAuth",
- *     type="http",
- *     scheme="bearer",
- *     bearerFormat="JWT"
- * )
- *
- * @OA\Server(
- *     url="/api",
- *     description="API Server"
- * )
- */
 class AuthController extends Controller
 {
     /**
-     * @OA\Post(
-     *     path="/v1/auth/register",
-     *     tags={"Authentication"},
-     *     summary="Register a new user",
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             required={"name","email","password","organization_name"},
-     *             @OA\Property(property="name", type="string", example="John Doe"),
-     *             @OA\Property(property="email", type="string", format="email", example="john@example.com"),
-     *             @OA\Property(property="password", type="string", format="password", example="password123"),
-     *             @OA\Property(property="password_confirmation", type="string", format="password", example="password123"),
-     *             @OA\Property(property="organization_name", type="string", example="Acme Corp"),
-     *             @OA\Property(property="industry", type="string", example="Technology"),
-     *             @OA\Property(property="company_size", type="string", example="10-50")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=201,
-     *         description="User registered successfully",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="user", type="object"),
-     *             @OA\Property(property="tenant", type="object"),
-     *             @OA\Property(property="organization", type="object"),
-     *             @OA\Property(property="token", type="string")
-     *         )
-     *     ),
-     *     @OA\Response(response=422, description="Validation error")
-     * )
+     * Create a new AuthController instance.
      */
-    public function register(Request $request)
+    public function __construct()
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255',
-            'password' => 'required|string|min:8|confirmed',
-            'organization_name' => 'required|string|max:255',
-            'industry' => 'nullable|string|max:100',
-            'company_size' => 'nullable|string|max:50',
-        ]);
+        $this->middleware('auth:api', ['except' => ['login', 'register']]);
+    }
 
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        // Create tenant
-        $tenant = Tenant::create([
-            'name' => $request->organization_name,
-            'slug' => \Illuminate\Support\Str::slug($request->organization_name) . '-' . substr(md5(time()), 0, 6),
-            'type' => 'organization',
-            'status' => 'active',
-            'trial_ends_at' => now()->addDays(14),
-        ]);
-
-        // Create domain for tenant
-        $tenant->domains()->create([
-            'domain' => $tenant->slug . '.aasim.local',
-        ]);
-
-        $tenant->run(function() use ($request, $tenant) {
-            // Create organization
-            $organization = $tenant->organizations()->create([
-                'name' => $request->organization_name,
-                'industry' => $request->industry,
-                'company_size' => $request->company_size,
-                'timezone' => 'UTC',
-                'settings' => [],
-            ]);
-
-            // Create user
-            $user = $tenant->users()->create([
+    /**
+     * Register a new user.
+     */
+    public function register(RegisterRequest $request): JsonResponse
+    {
+        try {
+            $user = User::create([
+                'tenant_id' => tenant('id'),
                 'name' => $request->name,
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
+                'avatar_url' => $request->avatar_url,
                 'status' => 'active',
             ]);
 
-            // Assign admin role
-            $user->assignRole('admin');
+            // Auto-login: generate JWT token
+            $token = JWTAuth::fromUser($user);
 
-            // Create assignment
-            $user->assignments()->create([
-                'tenant_id' => $tenant->id,
-                'organization_id' => $organization->id,
-                'access_scope' => ['role' => 'owner'],
+            // Create session
+            $sessionId = Str::uuid()->toString();
+            $session = UserSession::create([
+                'tenant_id' => tenant('id'),
+                'user_id' => $user->id,
+                'session_id' => $sessionId,
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'device_type' => $this->detectDeviceType($request->userAgent()),
+                'browser' => $this->detectBrowser($request->userAgent()),
+                'platform' => $this->detectPlatform($request->userAgent()),
+                'location' => $this->detectLocation($request->ip()),
+                'started_at' => now(),
+                'last_activity_at' => now(),
+                'is_active' => true,
             ]);
 
-            $token = $user->createToken('auth-token')->plainTextToken;
+            // Log registration activity
+            $this->logActivity($user->id, 'login', 'create', 'User', $user->id, "User registered: {$user->email}", $request);
 
             return response()->json([
-                'user' => $user,
-                'tenant' => $tenant,
-                'organization' => $organization,
-                'token' => $token,
+                'success' => true,
+                'message' => 'Registration successful',
+                'data' => [
+                    'user' => $user->load('tenant'),
+                    'token' => $token,
+                    'token_type' => 'bearer',
+                    'expires_in' => config('jwt.ttl') * 60, // Convert minutes to seconds
+                    'session_id' => $sessionId,
+                ],
             ], 201);
-        });
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Registration failed',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
-     * @OA\Post(
-     *     path="/v1/auth/login",
-     *     tags={"Authentication"},
-     *     summary="Login user",
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             required={"email","password"},
-     *             @OA\Property(property="email", type="string", format="email", example="john@example.com"),
-     *             @OA\Property(property="password", type="string", format="password", example="password123")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Login successful",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="user", type="object"),
-     *             @OA\Property(property="token", type="string")
-     *         )
-     *     ),
-     *     @OA\Response(response=401, description="Invalid credentials")
-     * )
+     * Login user and create token.
      */
-    public function login(Request $request)
+    public function login(LoginRequest $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
+        $credentials = $request->only('email', 'password');
 
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
+        try {
+            if (!$token = auth('api')->attempt($credentials)) {
+                // Log failed login attempt
+                $user = User::where('email', $request->email)->first();
+                if ($user) {
+                    $this->logActivity($user->id, 'login', 'read', 'User', $user->id, "Failed login attempt: {$request->email}", $request, 'failure', 'Invalid password');
+                }
 
-        $user = User::where('email', $request->email)->first();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid email or password',
+                ], 401);
+            }
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
-            throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
+            $user = auth('api')->user();
+
+            // Update last login
+            $user->update(['last_login_at' => now()]);
+
+            // Create session
+            $sessionId = Str::uuid()->toString();
+            $session = UserSession::create([
+                'tenant_id' => tenant('id'),
+                'user_id' => $user->id,
+                'session_id' => $sessionId,
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'device_type' => $this->detectDeviceType($request->userAgent()),
+                'browser' => $this->detectBrowser($request->userAgent()),
+                'platform' => $this->detectPlatform($request->userAgent()),
+                'location' => $this->detectLocation($request->ip()),
+                'started_at' => now(),
+                'last_activity_at' => now(),
+                'is_active' => true,
             ]);
+
+            // Log successful login
+            $this->logActivity($user->id, 'login', 'read', 'User', $user->id, "User logged in: {$user->email}", $request);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Login successful',
+                'data' => [
+                    'user' => $user->load('tenant'),
+                    'token' => $token,
+                    'token_type' => 'bearer',
+                    'expires_in' => auth('api')->factory()->getTTL() * 60,
+                    'session_id' => $sessionId,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Login failed',
+                'error' => $e->getMessage(),
+            ], 500);
         }
-
-        // Update last login
-        $user->update(['last_login_at' => now()]);
-
-        $token = $user->createToken('auth-token')->plainTextToken;
-
-        return response()->json([
-            'user' => $user->load(['tenant', 'assignments.organization']),
-            'token' => $token,
-        ]);
     }
 
     /**
-     * @OA\Post(
-     *     path="/v1/auth/logout",
-     *     tags={"Authentication"},
-     *     summary="Logout user",
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Response(response=200, description="Logout successful")
-     * )
+     * Get the authenticated User.
      */
-    public function logout(Request $request)
+    public function me(): JsonResponse
     {
-        $request->user()->currentAccessToken()->delete();
+        try {
+            $user = auth('api')->user();
 
-        return response()->json(['message' => 'Logged out successfully']);
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User not authenticated',
+                ], 401);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $user->load([
+                    'tenant',
+                    'teams',
+                    'assignments',
+                    'roles.permissions',
+                ]),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch user data',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
-     * @OA\Get(
-     *     path="/v1/auth/me",
-     *     tags={"Authentication"},
-     *     summary="Get authenticated user",
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Response(
-     *         response=200,
-     *         description="User data",
-     *         @OA\JsonContent(@OA\Property(property="user", type="object"))
-     *     )
-     * )
+     * Log the user out (Invalidate the token).
      */
-    public function me(Request $request)
+    public function logout(Request $request): JsonResponse
     {
-        return response()->json([
-            'user' => $request->user()->load([
-                'tenant',
-                'assignments.organization',
-                'assignments.department',
-                'teams',
-            ]),
-        ]);
+        try {
+            $user = auth('api')->user();
+
+            // End all active sessions
+            UserSession::where('user_id', $user->id)
+                ->where('is_active', true)
+                ->update([
+                    'is_active' => false,
+                    'ended_at' => now(),
+                    'duration_seconds' => \DB::raw('EXTRACT(EPOCH FROM (NOW() - started_at))'),
+                ]);
+
+            // Log logout activity
+            $this->logActivity($user->id, 'logout', 'update', 'User', $user->id, "User logged out: {$user->email}", $request);
+
+            auth('api')->logout();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Successfully logged out',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Logout failed',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
-     * @OA\Post(
-     *     path="/v1/auth/forgot-password",
-     *     tags={"Authentication"},
-     *     summary="Request password reset",
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             required={"email"},
-     *             @OA\Property(property="email", type="string", format="email")
-     *         )
-     *     ),
-     *     @OA\Response(response=200, description="Reset link sent")
-     * )
+     * Refresh a token.
      */
-    public function forgotPassword(Request $request)
+    public function refresh(): JsonResponse
     {
-        $request->validate(['email' => 'required|email']);
+        try {
+            $newToken = auth('api')->refresh();
 
-        // Implementation for password reset email
-        return response()->json([
-            'message' => 'Password reset link sent to your email',
-        ]);
+            return response()->json([
+                'success' => true,
+                'message' => 'Token refreshed successfully',
+                'data' => [
+                    'token' => $newToken,
+                    'token_type' => 'bearer',
+                    'expires_in' => auth('api')->factory()->getTTL() * 60,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Token refresh failed',
+                'error' => $e->getMessage(),
+            ], 401);
+        }
     }
 
     /**
-     * @OA\Post(
-     *     path="/v1/auth/reset-password",
-     *     tags={"Authentication"},
-     *     summary="Reset password",
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             required={"email","password","password_confirmation","token"},
-     *             @OA\Property(property="email", type="string", format="email"),
-     *             @OA\Property(property="password", type="string", format="password"),
-     *             @OA\Property(property="password_confirmation", type="string", format="password"),
-     *             @OA\Property(property="token", type="string")
-     *         )
-     *     ),
-     *     @OA\Response(response=200, description="Password reset successful")
-     * )
+     * Update user profile.
      */
-    public function resetPassword(Request $request)
+    public function updateProfile(Request $request): JsonResponse
     {
         $request->validate([
-            'email' => 'required|email',
-            'password' => 'required|min:8|confirmed',
-            'token' => 'required',
+            'name' => ['sometimes', 'string', 'max:255'],
+            'avatar_url' => ['sometimes', 'nullable', 'url', 'max:500'],
         ]);
 
-        // Implementation for password reset
-        return response()->json([
-            'message' => 'Password reset successfully',
+        try {
+            $user = auth('api')->user();
+
+            $user->update($request->only('name', 'avatar_url'));
+
+            // Log profile update
+            $this->logActivity($user->id, 'update', 'update', 'User', $user->id, "Profile updated: {$user->email}", $request);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Profile updated successfully',
+                'data' => $user->fresh()->load('tenant'),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Profile update failed',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Change user password.
+     */
+    public function changePassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'current_password' => ['required', 'string'],
+            'new_password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        try {
+            $user = auth('api')->user();
+
+            if (!Hash::check($request->current_password, $user->password)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Current password is incorrect',
+                ], 422);
+            }
+
+            $user->update([
+                'password' => Hash::make($request->new_password),
+            ]);
+
+            // Log password change (sensitive)
+            $this->logActivity($user->id, 'update', 'update', 'User', $user->id, "Password changed: {$user->email}", $request, 'success', null, true);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Password changed successfully',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Password change failed',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Log user activity.
+     */
+    private function logActivity(
+        string $userId,
+        string $activityType,
+        string $action,
+        string $entityType,
+        ?string $entityId,
+        string $description,
+        Request $request,
+        string $status = 'success',
+        ?string $errorMessage = null,
+        bool $isSensitive = false
+    ): void {
+        UserActivity::create([
+            'tenant_id' => tenant('id'),
+            'user_id' => $userId,
+            'organization_id' => null,
+            'activity_type' => $activityType,
+            'action' => $action,
+            'entity_type' => $entityType,
+            'entity_id' => $entityId,
+            'description' => $description,
+            'metadata' => [
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'device_type' => $this->detectDeviceType($request->userAgent()),
+            ],
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'status' => $status,
+            'error_message' => $errorMessage,
+            'is_sensitive' => $isSensitive,
+            'requires_audit' => $isSensitive,
         ]);
     }
 
     /**
-     * @OA\Get(
-     *     path="/v1/dashboard/stats",
-     *     tags={"Dashboard"},
-     *     summary="Get dashboard statistics",
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Response(response=200, description="Dashboard stats")
-     * )
+     * Detect device type from user agent.
      */
-    public function dashboardStats(Request $request)
+    private function detectDeviceType(?string $userAgent): string
     {
-        $user = $request->user();
-        $tenant = $user->tenant;
+        if (!$userAgent) {
+            return 'unknown';
+        }
 
-        return response()->json([
-            'total_agents' => $tenant->agents()->count(),
-            'active_job_flows' => \App\Models\JobFlow::where('tenant_id', $tenant->id)
-                ->where('status', 'active')
-                ->count(),
-            'pending_approvals' => \App\Models\HITLApproval::where('tenant_id', $tenant->id)
-                ->where('status', 'pending')
-                ->count(),
-            'executions_today' => \App\Models\AgentExecution::where('tenant_id', $tenant->id)
-                ->whereDate('created_at', today())
-                ->count(),
-            'total_users' => $tenant->users()->count(),
-            'subscription_status' => $tenant->activeSubscription?->status ?? 'trial',
-            'trial_ends_at' => $tenant->trial_ends_at,
-        ]);
+        if (preg_match('/mobile|android|iphone|ipad|phone/i', $userAgent)) {
+            return 'mobile';
+        }
+
+        if (preg_match('/tablet|ipad/i', $userAgent)) {
+            return 'tablet';
+        }
+
+        return 'desktop';
+    }
+
+    /**
+     * Detect browser from user agent.
+     */
+    private function detectBrowser(?string $userAgent): string
+    {
+        if (!$userAgent) {
+            return 'unknown';
+        }
+
+        if (preg_match('/chrome|chromium|crios/i', $userAgent)) {
+            return 'Chrome';
+        }
+
+        if (preg_match('/firefox|fxios/i', $userAgent)) {
+            return 'Firefox';
+        }
+
+        if (preg_match('/safari/i', $userAgent) && !preg_match('/chrome/i', $userAgent)) {
+            return 'Safari';
+        }
+
+        if (preg_match('/edge/i', $userAgent)) {
+            return 'Edge';
+        }
+
+        if (preg_match('/opera|opr\//i', $userAgent)) {
+            return 'Opera';
+        }
+
+        return 'Other';
+    }
+
+    /**
+     * Detect platform from user agent.
+     */
+    private function detectPlatform(?string $userAgent): string
+    {
+        if (!$userAgent) {
+            return 'unknown';
+        }
+
+        if (preg_match('/windows/i', $userAgent)) {
+            return 'Windows';
+        }
+
+        if (preg_match('/macintosh|mac os x/i', $userAgent)) {
+            return 'macOS';
+        }
+
+        if (preg_match('/linux/i', $userAgent)) {
+            return 'Linux';
+        }
+
+        if (preg_match('/android/i', $userAgent)) {
+            return 'Android';
+        }
+
+        if (preg_match('/iphone|ipad|ipod/i', $userAgent)) {
+            return 'iOS';
+        }
+
+        return 'Other';
+    }
+
+    /**
+     * Detect location from IP (simplified - in production use GeoIP service).
+     */
+    private function detectLocation(?string $ip): ?string
+    {
+        // In production, integrate with a GeoIP service like MaxMind
+        // For now, return null or basic info
+        if ($ip === '127.0.0.1' || $ip === '::1') {
+            return 'localhost';
+        }
+
+        return null; // In production: use GeoIP lookup
     }
 }

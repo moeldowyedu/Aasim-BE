@@ -21,6 +21,8 @@ use App\Http\Controllers\Api\V1\WorkflowController;
 use App\Http\Controllers\Api\V1\APIKeyController;
 use App\Http\Controllers\Api\V1\ConnectedAppController;
 use App\Http\Controllers\Api\V1\UserActivityController;
+use App\Http\Controllers\Api\V1\RoleController;
+use App\Http\Controllers\Api\V1\PermissionController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -63,6 +65,8 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::post('/auth/refresh', [AuthController::class, 'refresh']);
     Route::get('/auth/me', [AuthController::class, 'me']);
+    Route::put('/auth/profile', [AuthController::class, 'updateProfile']);
+    Route::post('/auth/change-password', [AuthController::class, 'changePassword']);
 
     // Organizations
     Route::apiResource('organizations', OrganizationController::class);
@@ -92,6 +96,12 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
     Route::put('/users/{id}/status', [UserController::class, 'updateStatus']);
     Route::post('/users/{id}/assign', [UserController::class, 'assign']);
     Route::get('/users/{id}/assignments', [UserController::class, 'assignments']);
+
+    // Roles & Permissions
+    Route::apiResource('roles', RoleController::class);
+    Route::get('/permissions', [PermissionController::class, 'index']);
+    Route::get('/permissions/list', [PermissionController::class, 'list']);
+    Route::get('/permissions/{id}', [PermissionController::class, 'show']);
 
     // Engines & Rubrics
     Route::get('/engines/{id}', [EngineController::class, 'show']);
@@ -143,6 +153,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
     // Webhooks
     Route::apiResource('webhooks', WebhookController::class);
     Route::post('/webhooks/{id}/test', [WebhookController::class, 'test']);
+    Route::post('/webhooks/{id}/toggle', [WebhookController::class, 'toggle']);
 
     // API Keys
     Route::apiResource('api-keys', APIKeyController::class);

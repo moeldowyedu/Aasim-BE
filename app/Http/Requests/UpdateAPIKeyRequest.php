@@ -11,7 +11,7 @@ class UpdateAPIKeyRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return $this->user()->can('update-api-keys');
     }
 
     /**
@@ -22,7 +22,22 @@ class UpdateAPIKeyRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'name' => ['sometimes', 'string', 'max:255'],
+            'scopes' => ['sometimes', 'array'],
+            'scopes.*' => ['string', 'in:read,write,delete,admin'],
+            'expires_at' => ['sometimes', 'nullable', 'date', 'after:now'],
+            'is_active' => ['sometimes', 'boolean'],
+        ];
+    }
+
+    /**
+     * Get custom messages for validator errors.
+     */
+    public function messages(): array
+    {
+        return [
+            'scopes.*.in' => 'Invalid scope. Allowed values: read, write, delete, admin',
+            'expires_at.after' => 'Expiration date must be in the future',
         ];
     }
 }

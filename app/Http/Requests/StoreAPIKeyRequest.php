@@ -11,7 +11,7 @@ class StoreAPIKeyRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return $this->user()->can('create-api-keys');
     }
 
     /**
@@ -22,7 +22,22 @@ class StoreAPIKeyRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'name' => ['required', 'string', 'max:255'],
+            'scopes' => ['nullable', 'array'],
+            'scopes.*' => ['string', 'in:read,write,delete,admin'],
+            'expires_at' => ['nullable', 'date', 'after:now'],
+        ];
+    }
+
+    /**
+     * Get custom messages for validator errors.
+     */
+    public function messages(): array
+    {
+        return [
+            'name.required' => 'API key name is required',
+            'scopes.*.in' => 'Invalid scope. Allowed values: read, write, delete, admin',
+            'expires_at.after' => 'Expiration date must be in the future',
         ];
     }
 }

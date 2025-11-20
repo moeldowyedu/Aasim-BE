@@ -3,10 +3,11 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\StoreWebhookRequest;
-use App\Http\Requests\UpdateWebhookRequest;
+use App\Http\Requests\Integrations\StoreWebhookRequest;
+use App\Http\Requests\Integrations\UpdateWebhookRequest;
 use App\Http\Resources\WebhookResource;
 use App\Models\Webhook;
+use App\Models\UserActivity;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Http;
@@ -22,6 +23,8 @@ class WebhookController extends Controller
         $webhooks = Webhook::where('tenant_id', tenant('id'))
             ->with(['createdBy'])
             ->paginate(request('per_page', 15));
+
+        $this->logActivity('api_call', 'read', 'Webhook', null, 'Listed webhooks');
 
         return WebhookResource::collection($webhooks);
     }
@@ -44,10 +47,7 @@ class WebhookController extends Controller
             ...$data,
         ]);
 
-        activity()
-            ->performedOn($webhook)
-            ->causedBy(auth()->user())
-            ->log('Webhook created');
+        $this->logActivity('create', 'create', 'Webhook', $webhook->id, "Webhook created: {$webhook->name}");
 
         $webhook->load(['createdBy']);
 
@@ -65,6 +65,8 @@ class WebhookController extends Controller
 
         $webhook->load(['createdBy']);
 
+        $this->logActivity('api_call', 'read', 'Webhook', $webhook->id, "Viewed webhook: {$webhook->name}");
+
         return new WebhookResource($webhook);
     }
 
@@ -77,10 +79,7 @@ class WebhookController extends Controller
 
         $webhook->update($request->validated());
 
-        activity()
-            ->performedOn($webhook)
-            ->causedBy(auth()->user())
-            ->log('Webhook updated');
+        $this->logActivity('update', 'update', 'Webhook', $webhook->id, "Webhook updated: {$webhook->name}");
 
         $webhook->load(['createdBy']);
 
@@ -94,12 +93,10 @@ class WebhookController extends Controller
     {
         $this->authorize('delete', $webhook);
 
-        activity()
-            ->performedOn($webhook)
-            ->causedBy(auth()->user())
-            ->log('Webhook deleted');
-
+        $name = $webhook->name;
         $webhook->delete();
+
+        $this->logActivity('delete', 'delete', 'Webhook', $webhook->id, "Webhook deleted: {$name}");
 
         return response()->json(null, 204);
     }
@@ -134,33 +131,92 @@ class WebhookController extends Controller
                 'last_triggered_at' => now(),
             ]);
 
-            activity()
-                ->performedOn($webhook)
-                ->causedBy(auth()->user())
-                ->withProperties([
-                    'status_code' => $response->status(),
-                    'response_body' => $response->body(),
-                ])
-                ->log('Webhook tested');
+            $this->logActivity('api_call', 'execute', 'Webhook', $webhook->id, "Webhook test successful: {$webhook->name}");
 
             return response()->json([
+                'success' => true,
                 'message' => 'Webhook test successful',
                 'status_code' => $response->status(),
                 'response' => $response->body(),
             ], 200);
         } catch (\Exception $e) {
-            activity()
-                ->performedOn($webhook)
-                ->causedBy(auth()->user())
-                ->withProperties([
-                    'error' => $e->getMessage(),
-                ])
-                ->log('Webhook test failed');
+            $this->logActivity('api_call', 'execute', 'Webhook', $webhook->id, "Webhook test failed: {$webhook->name}", 'failure', $e->getMessage());
 
             return response()->json([
+                'success' => false,
                 'message' => 'Webhook test failed',
                 'error' => $e->getMessage(),
             ], 422);
         }
+    }
+
+    /**
+     * Toggle webhook active status.
+     */
+    public function toggle(string $id): JsonResponse
+    {
+        $this->authorize('update-webhooks');
+
+        try {
+            $webhook = Webhook::where('tenant_id', tenant('id'))
+                ->where('id', $id)
+                ->firstOrFail();
+
+            $webhook->update([
+                'is_active' => !$webhook->is_active,
+            ]);
+
+            $status = $webhook->is_active ? 'activated' : 'deactivated';
+            $this->logActivity('update', 'update', 'Webhook', $webhook->id, "Webhook {$status}: {$webhook->name}");
+
+            return response()->json([
+                'success' => true,
+                'message' => "Webhook {$status} successfully",
+                'data' => new WebhookResource($webhook->fresh()->load('createdBy')),
+            ]);
+        } catch (\Exception $e) {
+            $this->logActivity('update', 'update', 'Webhook', $id, 'Failed to toggle webhook', 'failure', $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to toggle webhook status',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Log user activity.
+     */
+    private function logActivity(
+        string $activityType,
+        string $action,
+        string $entityType,
+        ?string $entityId,
+        string $description,
+        string $status = 'success',
+        ?string $errorMessage = null
+    ): void {
+        UserActivity::create([
+            'tenant_id' => tenant('id'),
+            'user_id' => request()->user()->id,
+            'organization_id' => request()->user()->organization_id ?? null,
+            'activity_type' => $activityType,
+            'action' => $action,
+            'entity_type' => $entityType,
+            'entity_id' => $entityId,
+            'description' => $description,
+            'metadata' => [
+                'ip' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'request_id' => request()->header('X-Request-ID'),
+            ],
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'status' => $status,
+            'error_message' => $errorMessage,
+            'is_sensitive' => false,
+            'requires_audit' => false,
+        ]);
     }
 }

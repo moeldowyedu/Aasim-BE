@@ -153,6 +153,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
     // Webhooks
     Route::apiResource('webhooks', WebhookController::class);
     Route::post('/webhooks/{id}/test', [WebhookController::class, 'test']);
+    Route::post('/webhooks/{id}/toggle', [WebhookController::class, 'toggle']);
 
     // API Keys
     Route::apiResource('api-keys', APIKeyController::class);

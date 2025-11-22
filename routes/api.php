@@ -76,7 +76,7 @@ Route::prefix('v1')->group(function () {
 });
 
 // Protected routes
-Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
+Route::prefix('v1')->middleware(['auth:api'])->group(function () {
     // Auth
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::post('/auth/refresh', [AuthController::class, 'refresh']);

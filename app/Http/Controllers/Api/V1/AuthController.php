@@ -110,7 +110,7 @@ class AuthController extends Controller
                 // Log failed login attempt
                 $user = User::where('email', $request->email)->first();
                 if ($user) {
-                    $this->logActivity($user->id, 'login', 'read', 'User', $user->id, "Failed login attempt: {$request->email}", $request, 'failure', 'Invalid password');
+                    $this->logActivity($user->id, 'login', 'read', 'User', $user->id, "Failed login attempt: {$request->email}", $request, 'failure', 'Invalid password', false, $user->tenant_id);
                 }
 
                 return response()->json([
@@ -127,7 +127,7 @@ class AuthController extends Controller
             // Create session
             $sessionId = Str::uuid()->toString();
             $session = UserSession::create([
-                'tenant_id' => tenant('id'),
+                'tenant_id' => $user->tenant_id,
                 'user_id' => $user->id,
                 'session_id' => $sessionId,
                 'ip_address' => $request->ip(),
@@ -142,7 +142,7 @@ class AuthController extends Controller
             ]);
 
             // Log successful login
-            $this->logActivity($user->id, 'login', 'read', 'User', $user->id, "User logged in: {$user->email}", $request);
+            $this->logActivity($user->id, 'login', 'read', 'User', $user->id, "User logged in: {$user->email}", $request, 'success', null, false, $user->tenant_id);
 
             return response()->json([
                 'success' => true,

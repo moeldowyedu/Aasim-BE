@@ -100,3 +100,22 @@ If you see: "No connection could be made because the target machine actively ref
 This means Redis is not running. Either:
 1. Install and start Redis, or
 2. Use the default file/database configuration (already set in `.env.example`)
+
+### Cached Platform Check Error
+
+If you see the platform check error even after pulling the latest changes:
+```
+Composer detected issues in your platform: Your Composer dependencies require a PHP version ">= 8.3.0"
+```
+
+This is caused by a cached platform check file. Fix it by running:
+```bash
+rm -rf vendor/composer/platform_check.php
+composer install
+```
+
+Or on Windows:
+```bash
+del vendor\composer\platform_check.php
+composer install
+```

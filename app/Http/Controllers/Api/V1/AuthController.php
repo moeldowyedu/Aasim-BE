@@ -25,20 +25,24 @@ class AuthController extends Controller
     {
         try {
             return DB::transaction(function () use ($request) {
-                // Create tenant if organization_name is provided
-                $tenantId = null;
-                if ($request->has('organization_name')) {
-                    $tenant = Tenant::create([
-                        'id' => Str::uuid()->toString(),
-                        'data' => [
-                            'name' => $request->organization_name,
-                        ],
-                    ]);
-                    $tenantId = $tenant->id;
-                } else {
-                    // Use current tenant context if available
-                    $tenantId = tenant('id');
-                }
+                // Create tenant for organization or individual users
+                $tenantType = $request->input('tenant_type', 'organization');
+
+                // Always create a tenant for new users
+                $organizationName = $request->organization_name
+                    ?? ($tenantType === 'organization'
+                        ? $request->name . "'s Organization"
+                        : $request->name . "'s Workspace");
+
+                $tenant = Tenant::create(['id' => Str::uuid()->toString()]);
+
+                // Set tenant data using the proper method
+                $tenant->name = $organizationName;
+                $tenant->type = $tenantType;
+                $tenant->plan = $request->plan;
+                $tenant->save();
+
+                $tenantId = $tenant->id;
 
                 $user = User::create([
                     'tenant_id' => $tenantId,
@@ -46,6 +50,7 @@ class AuthController extends Controller
                     'email' => $request->email,
                     'password' => Hash::make($request->password),
                     'avatar_url' => $request->avatar_url,
+                    'phone' => $request->phone,
                     'status' => 'active',
                 ]);
 
@@ -105,7 +110,7 @@ class AuthController extends Controller
                 // Log failed login attempt
                 $user = User::where('email', $request->email)->first();
                 if ($user) {
-                    $this->logActivity($user->id, 'login', 'read', 'User', $user->id, "Failed login attempt: {$request->email}", $request, 'failure', 'Invalid password');
+                    $this->logActivity($user->id, 'login', 'read', 'User', $user->id, "Failed login attempt: {$request->email}", $request, 'failure', 'Invalid password', false, $user->tenant_id);
                 }
 
                 return response()->json([
@@ -122,7 +127,7 @@ class AuthController extends Controller
             // Create session
             $sessionId = Str::uuid()->toString();
             $session = UserSession::create([
-                'tenant_id' => tenant('id'),
+                'tenant_id' => $user->tenant_id,
                 'user_id' => $user->id,
                 'session_id' => $sessionId,
                 'ip_address' => $request->ip(),
@@ -137,7 +142,7 @@ class AuthController extends Controller
             ]);
 
             // Log successful login
-            $this->logActivity($user->id, 'login', 'read', 'User', $user->id, "User logged in: {$user->email}", $request);
+            $this->logActivity($user->id, 'login', 'read', 'User', $user->id, "User logged in: {$user->email}", $request, 'success', null, false, $user->tenant_id);
 
             return response()->json([
                 'success' => true,

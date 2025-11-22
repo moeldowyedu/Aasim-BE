@@ -12,9 +12,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->api(prepend: [
-            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-        ]);
+        // JWT authentication - no need for Sanctum middleware
 
         // Add global middleware
         $middleware->append(\App\Http\Middleware\CDNHeaders::class);

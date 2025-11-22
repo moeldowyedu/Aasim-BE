@@ -70,7 +70,7 @@ class AuthController extends Controller
                 ]);
 
                 // Log registration activity
-                $this->logActivity($user->id, 'login', 'create', 'User', $user->id, "User registered: {$user->email}", $request);
+                $this->logActivity($user->id, 'login', 'create', 'User', $user->id, "User registered: {$user->email}", $request, 'success', null, false, $tenantId);
 
                 return response()->json([
                     'success' => true,
@@ -338,10 +338,11 @@ class AuthController extends Controller
         Request $request,
         string $status = 'success',
         ?string $errorMessage = null,
-        bool $isSensitive = false
+        bool $isSensitive = false,
+        ?string $tenantId = null
     ): void {
         UserActivity::create([
-            'tenant_id' => tenant('id'),
+            'tenant_id' => $tenantId ?? tenant('id'),
             'user_id' => $userId,
             'organization_id' => null,
             'activity_type' => $activityType,

@@ -21,14 +21,14 @@ return new class extends Migration
             $table->uuid('branch_id')->nullable();
             $table->uuid('department_id')->nullable();
             $table->uuid('project_id')->nullable();
-            $table->uuid('reporting_manager_id')->nullable();
+            $table->unsignedBigInteger('reporting_manager_id')->nullable();
             $table->enum('employment_type', ['full-time', 'part-time', 'on-demand'])->default('full-time');
             $table->enum('schedule_type', ['one-time', 'hourly', 'daily', 'weekly', 'monthly', 'quarterly', 'half-yearly', 'yearly', 'custom']);
             $table->jsonb('schedule_config');
             $table->jsonb('input_source');
             $table->jsonb('output_destination');
             $table->enum('hitl_mode', ['fully-ai', 'hitl', 'standby', 'in-charge', 'hybrid'])->default('fully-ai');
-            $table->uuid('hitl_supervisor_id')->nullable();
+            $table->unsignedBigInteger('hitl_supervisor_id')->nullable();
             $table->jsonb('hitl_rules')->nullable();
             $table->enum('status', ['active', 'inactive', 'paused'])->default('active');
             $table->timestamp('last_run_at')->nullable();

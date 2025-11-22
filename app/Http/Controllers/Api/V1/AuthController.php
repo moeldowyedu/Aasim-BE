@@ -79,7 +79,7 @@ class AuthController extends Controller
                         'user' => $user->load('tenant'),
                         'token' => $token,
                         'token_type' => 'bearer',
-                        'expires_in' => config('jwt.ttl') * 60, // Convert minutes to seconds
+                        'expires_in' => (int) config('jwt.ttl') * 60, // Convert minutes to seconds
                         'session_id' => $sessionId,
                     ],
                 ], 201);

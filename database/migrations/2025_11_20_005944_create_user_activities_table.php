@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('activity_type'); // 'login', 'logout', 'api_call', 'data_access', 'data_modification', 'settings_change', 'app_connection', 'export', etc.
             $table->string('action'); // 'create', 'read', 'update', 'delete', 'download', 'upload', 'share', etc.
             $table->string('entity_type')->nullable(); // 'user', 'project', 'agent', 'workflow', etc.
-            $table->uuid('entity_id')->nullable();
+            $table->string('entity_id')->nullable(); // Polymorphic - can be UUID or bigint
             $table->text('description')->nullable();
             $table->json('metadata')->nullable(); // Additional context data
             $table->string('ip_address', 45)->nullable();

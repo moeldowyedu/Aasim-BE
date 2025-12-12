@@ -89,10 +89,19 @@ class AuthController extends Controller
         if ($request->type === 'organization') {
             $rules['organizationFullName'] = 'required|string|max:255';
             $rules['organizationShortName'] = 'nullable|string|max:50'; // Just a display short name, not unique
-            $rules['organizationLogo'] = 'nullable|string|max:500'; // URL or path
+            $rules['organizationLogo'] = 'nullable'; // Manually validate below to allow string OR file
         }
 
         $request->validate($rules);
+
+        // Manual validation for organizationLogo to support both string URL and File
+        if ($request->type === 'organization' && $request->organizationLogo) {
+            if ($request->hasFile('organizationLogo')) {
+                $request->validate(['organizationLogo' => 'image|max:2048']);
+            } else {
+                $request->validate(['organizationLogo' => 'string|max:500']);
+            }
+        }
 
         try {
             return DB::transaction(function () use ($request) {
@@ -108,12 +117,20 @@ class AuthController extends Controller
 
                 // Step 2: Create Organization (if applicable)
                 if ($request->type === 'organization') {
+                    $logoUrl = null;
+                    if ($request->hasFile('organizationLogo')) {
+                        $path = $request->file('organizationLogo')->store('organizations/logos', 'public');
+                        $logoUrl = '/storage/' . $path;
+                    } elseif (is_string($request->organizationLogo)) {
+                        $logoUrl = $request->organizationLogo;
+                    }
+
                     $tenant->organizations()->create([
                         'name' => $request->organizationFullName,
                         'short_name' => $request->organizationShortName,
                         'country' => $request->country,
                         'phone' => $request->phone,
-                        'logo_url' => $request->organizationLogo,
+                        'logo_url' => $logoUrl,
                         // Defaults or other fields can be set here
                     ]);
                 }

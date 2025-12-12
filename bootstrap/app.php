@@ -21,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'jwt.auth' => \Tymon\JWTAuth\Http\Middleware\Authenticate::class,
             'jwt.refresh' => \Tymon\JWTAuth\Http\Middleware\RefreshToken::class,
             'tenant.status' => \App\Http\Middleware\CheckTenantStatus::class,
+            'tenancy.header' => \App\Http\Middleware\InitializeTenancyByHeader::class,
         ]);
 
         // Add global middleware

@@ -78,7 +78,7 @@ Route::prefix('v1')->group(function () {
 });
 
 // Protected routes
-Route::prefix('v1')->middleware(['jwt.auth', 'tenant.status'])->group(function () {
+Route::prefix('v1')->middleware(['jwt.auth', 'tenancy.header', 'tenant.status'])->group(function () {
     // Auth
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::post('/auth/refresh', [AuthController::class, 'refresh']);
@@ -210,6 +210,7 @@ Route::prefix('v1')->middleware(['jwt.auth', 'tenant.status'])->group(function (
     Route::post('/sessions/{id}/terminate', [UserActivityController::class, 'terminateSession']);
 
     // Subscriptions & Billing
+    Route::get('/billing/subscription', [SubscriptionController::class, 'current']); // Alias for frontend
     Route::get('/subscriptions', [SubscriptionController::class, 'index']);
     Route::get('/subscriptions/current', [SubscriptionController::class, 'current']);
     Route::post('/subscriptions/subscribe', [SubscriptionController::class, 'subscribe']);

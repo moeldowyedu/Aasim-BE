@@ -32,6 +32,22 @@ class Organization extends Model
     ];
 
     /**
+     * Get the logo URL as an absolute path.
+     */
+    public function getLogoUrlAttribute(?string $value): ?string
+    {
+        if (!$value) {
+            return null;
+        }
+
+        if (filter_var($value, FILTER_VALIDATE_URL)) {
+            return $value;
+        }
+
+        return asset($value);
+    }
+
+    /**
      * The attributes that should be cast.
      *
      * @var array<string, string>

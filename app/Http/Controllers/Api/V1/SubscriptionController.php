@@ -25,6 +25,38 @@ class SubscriptionController extends Controller
     }
 
     /**
+     * Get the current active subscription.
+     */
+    public function current(): JsonResponse
+    {
+        /** @var \App\Models\User */
+        $user = auth()->user();
+
+        if (!$user->tenant_id) {
+            return response()->json([
+                'data' => null,
+                'message' => 'User does not belong to any tenant.',
+            ], 404);
+        }
+
+        $subscription = \App\Models\Tenant::find($user->tenant_id)
+            ->activeSubscription()
+            ->with('plan')
+            ->first();
+
+        if (!$subscription) {
+            return response()->json([
+                'data' => null,
+                'message' => 'No active subscription found.',
+            ]);
+        }
+
+        return (new SubscriptionResource($subscription))
+            ->response()
+            ->setStatusCode(200);
+    }
+
+    /**
      * Store a newly created subscription.
      */
     public function store(StoreSubscriptionRequest $request): JsonResponse

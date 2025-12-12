@@ -196,7 +196,7 @@ class AuthController extends Controller
                     'message' => 'Registration successful',
                     'data' => [
                         'user' => $user->fresh(), // Reload to get all fields
-                        'tenant' => $tenant,
+                        'tenant' => $tenant->load('organizations'), // Load organizations to get logo/details
                         'token' => $token,
                         'token_type' => 'bearer',
                         'expires_in' => (int) config('jwt.ttl') * 60,
@@ -340,7 +340,7 @@ class AuthController extends Controller
                 'success' => true,
                 'message' => 'Login successful',
                 'data' => [
-                    'user' => $user->load('tenant'),
+                    'user' => $user->load('tenant.organizations'),
                     'token' => $token,
                     'token_type' => 'bearer',
                     'expires_in' => auth('api')->factory()->getTTL() * 60,
@@ -406,7 +406,7 @@ class AuthController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $user->load([
-                    'tenant',
+                    'tenant.organizations',
                     'teams',
                     'assignments',
                     'roles.permissions',

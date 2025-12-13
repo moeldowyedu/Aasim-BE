@@ -230,4 +230,5 @@ Route::prefix('v1')->middleware(['jwt.auth', 'tenancy.header', 'tenant.status'])
 // System Admin Routes
 Route::prefix('v1/admin')->middleware(['jwt.auth', 'system_admin'])->group(function () {
     Route::get('/tenants', [\App\Http\Controllers\Api\V1\TenantController::class, 'indexAdmin']);
+    Route::put('/tenants/{id}', [\App\Http\Controllers\Api\V1\TenantController::class, 'updateAdmin']);
 });

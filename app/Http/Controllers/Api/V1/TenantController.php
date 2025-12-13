@@ -56,9 +56,38 @@ class TenantController extends Controller
     {
         // For system admin, list ALL tenants
         // We include organizations to ensure logo_url in resource works efficiently
-        $tenants = Tenant::with(['organizations'])->paginate(request('per_page', 15));
+        // We include ownerMembership.user to get the admin details
+        // We count memberships to get total users
+        $tenants = Tenant::with(['organizations', 'ownerMembership.user'])
+            ->withCount('memberships')
+            ->paginate(request('per_page', 15));
 
         return TenantResource::collection($tenants);
+    }
+
+    /**
+     * Update tenant details (System Admin only).
+     */
+    public function updateAdmin(Request $request, string $id): TenantResource
+    {
+        $tenant = Tenant::findOrFail($id);
+
+        $validated = $request->validate([
+            'end_date' => ['nullable', 'date'],
+            // Add other admin-editable fields here if needed
+        ]);
+
+        if (array_key_exists('end_date', $validated)) {
+            $tenant->trial_ends_at = $validated['end_date'];
+        }
+
+        $tenant->save();
+
+        // Reload relationships for the resource
+        $tenant->load(['organizations', 'ownerMembership.user']);
+        $tenant->loadCount('memberships');
+
+        return new TenantResource($tenant);
     }
 
     /**

@@ -3,29 +3,52 @@
 namespace App\Providers;
 
 use Illuminate\Support\Facades\Gate;
-use Laravel\Telescope\IncomingEntry;
-use Laravel\Telescope\Telescope;
-use Laravel\Telescope\TelescopeApplicationServiceProvider;
+use Illuminate\Support\ServiceProvider;
 
-class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
+class TelescopeServiceProvider extends ServiceProvider
 {
     /**
      * Register any application services.
      */
     public function register(): void
     {
-        // Telescope::night();
+        // Only load Telescope if it exists (dev dependency)
+        if (!class_exists(\Laravel\Telescope\Telescope::class)) {
+            return;
+        }
+
+        $this->loadTelescopeConfiguration();
+    }
+
+    /**
+     * Bootstrap any application services.
+     */
+    public function boot(): void
+    {
+        if (!class_exists(\Laravel\Telescope\Telescope::class)) {
+            return;
+        }
+
+        $this->defineTelescopeGate();
+    }
+
+    /**
+     * Load Telescope configuration when available.
+     */
+    protected function loadTelescopeConfiguration(): void
+    {
+        \Laravel\Telescope\Telescope::night();
 
         $this->hideSensitiveRequestDetails();
 
         $isLocal = $this->app->environment('local');
 
-        Telescope::filter(function (IncomingEntry $entry) use ($isLocal) {
-            return $isLocal ||
-                   $entry->isReportableException() ||
-                   $entry->isFailedRequest() ||
-                   $entry->isFailedJob() ||
-                   $entry->isScheduledTask() ||
+        \Laravel\Telescope\Telescope::filter(function (\Laravel\Telescope\IncomingEntry $entry) use ($isLocal) {
+            return $isLocal ;
+                   $entry->isReportableException() ;
+                   $entry->isFailedRequest() ;
+                   $entry->isFailedJob() ;
+                   $entry->isScheduledTask() ;
                    $entry->hasMonitoredTag();
         });
     }
@@ -39,9 +62,9 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
             return;
         }
 
-        Telescope::hideRequestParameters(['_token']);
+        \Laravel\Telescope\Telescope::hideRequestParameters(['_token']);
 
-        Telescope::hideRequestHeaders([
+        \Laravel\Telescope\Telescope::hideRequestHeaders([
             'cookie',
             'x-csrf-token',
             'x-xsrf-token',
@@ -50,15 +73,11 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
 
     /**
      * Register the Telescope gate.
-     *
-     * This gate determines who can access Telescope in non-local environments.
      */
-    protected function gate(): void
+    protected function defineTelescopeGate(): void
     {
         Gate::define('viewTelescope', function ($user) {
-            return in_array($user->email, [
-                //
-            ]);
+            return $user->is_system_admin ?? false;
         });
     }
 }

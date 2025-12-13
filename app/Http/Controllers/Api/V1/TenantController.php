@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\TenantResource;
 use App\Models\Tenant;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -39,12 +40,25 @@ class TenantController extends Controller
         })->with([
                     'memberships' => function ($query) use ($user) {
                         $query->where('user_id', $user->id);
-                    }
+                    },
+                    'organizations' // Eager load organizations for logo
                 ])->get();
 
         return response()->json([
             'data' => TenantResource::collection($tenants),
         ]);
+    }
+
+    /**
+     * Display all tenants (System Admin only).
+     */
+    public function indexAdmin(Request $request): AnonymousResourceCollection
+    {
+        // For system admin, list ALL tenants
+        // We include organizations to ensure logo_url in resource works efficiently
+        $tenants = Tenant::with(['organizations'])->paginate(request('per_page', 15));
+
+        return TenantResource::collection($tenants);
     }
 
     /**

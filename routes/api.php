@@ -224,4 +224,10 @@ Route::prefix('v1')->middleware(['jwt.auth', 'tenancy.header', 'tenant.status'])
     Route::get('/dashboard/stats', [DashboardController::class, 'dashboardStats']);
     Route::get('/analytics/agents', [AgentController::class, 'analytics']);
     Route::get('/analytics/executions', [AgentExecutionController::class, 'analytics']);
+    Route::get('/analytics/executions', [AgentExecutionController::class, 'analytics']);
+});
+
+// System Admin Routes
+Route::prefix('v1/admin')->middleware(['jwt.auth', 'system_admin'])->group(function () {
+    Route::get('/tenants', [\App\Http\Controllers\Api\V1\TenantController::class, 'indexAdmin']);
 });

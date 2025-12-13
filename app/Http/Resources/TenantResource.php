@@ -21,6 +21,8 @@ class TenantResource extends JsonResource
             'user_role' => $this->whenLoaded('memberships', function () {
                 return $this->memberships->first()?->role;
             }),
+            'logo_url' => $this->organizations->sortBy('created_at')->first()?->logo_url,
+            'organizationLogo' => $this->organizations->sortBy('created_at')->first()?->logo_url, // Alias for frontend compatibility
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

@@ -153,7 +153,14 @@ class OrganizationController extends Controller
     {
         $this->authorize('update', $organization);
 
-        $organization->update($request->validated());
+        $data = $request->validated();
+
+        if ($request->hasFile('logo_url')) {
+            $path = $request->file('logo_url')->store('organizations/logos', 'public');
+            $data['logo_url'] = \Illuminate\Support\Facades\Storage::url($path);
+        }
+
+        $organization->update($data);
 
         activity()
             ->performedOn($organization)

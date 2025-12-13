@@ -19,7 +19,7 @@ class UpdateOrganizationRequest extends FormRequest
             'company_size' => ['nullable', 'string', 'max:50'],
             'country' => ['nullable', 'string', 'max:100'],
             'timezone' => ['nullable', 'string', 'max:50'],
-            'logo_url' => ['nullable', 'url', 'max:500'],
+            'logo_url' => ['nullable', 'string'], // validation handled in controller for file vs url
             'description' => ['nullable', 'string'],
             'settings' => ['nullable', 'array'],
         ];

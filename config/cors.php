@@ -19,7 +19,11 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'], // Debugging: Allow ALL
+    'allowed_origins' => [
+        'http://localhost:5173',
+        'http://127.0.0.1:5173',
+        'http://iti.localhost:5173', // Explicitly add user's subdomain
+    ],
 
     'allowed_origins_patterns' => [
         'http://*.localhost:5173',

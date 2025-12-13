@@ -95,6 +95,8 @@ Route::prefix('v1')->middleware(['jwt.auth', 'tenancy.header', 'tenant.status'])
     Route::get('/tenants', [\App\Http\Controllers\Api\V1\TenantController::class, 'index']);
     Route::post('/tenants', [\App\Http\Controllers\Api\V1\TenantController::class, 'store']);
     Route::post('/tenants/{id}/switch', [\App\Http\Controllers\Api\V1\TenantController::class, 'switch']);
+    Route::get('/tenants/{tenant}', [\App\Http\Controllers\Api\V1\TenantController::class, 'show']);
+    Route::put('/tenants/{tenant}', [\App\Http\Controllers\Api\V1\TenantController::class, 'update']); // Added specific tenant update route
     Route::get('/tenant', [\App\Http\Controllers\Api\V1\TenantController::class, 'show']);
     Route::put('/tenant', [\App\Http\Controllers\Api\V1\TenantController::class, 'update']);
 

@@ -227,13 +227,26 @@ class TenantController extends Controller
      *     )
      * )
      */
-    public function show(): TenantResource
+    public function show(Request $request, string $id = null): TenantResource
     {
-        $tenant = tenant();
+        if ($id) {
+            // Verify user has access to this tenant
+            $membership = \App\Models\TenantMembership::where('user_id', $request->user()->id)
+                ->where('tenant_id', $id)
+                ->exists();
 
-        // Ensure we have a Tenant model instance
-        if (!($tenant instanceof Tenant)) {
-            $tenant = Tenant::find($tenant->id);
+            if (!$membership) {
+                abort(403, 'Unauthorized access to this tenant.');
+            }
+
+            $tenant = Tenant::findOrFail($id);
+        } else {
+            $tenant = tenant();
+
+            // Ensure we have a Tenant model instance
+            if (!($tenant instanceof Tenant)) {
+                $tenant = Tenant::find($tenant->id);
+            }
         }
 
         return new TenantResource($tenant);
@@ -263,13 +276,26 @@ class TenantController extends Controller
      *     )
      * )
      */
-    public function update(Request $request): TenantResource
+    public function update(Request $request, string $id = null): TenantResource
     {
-        $tenant = tenant();
+        if ($id) {
+            // Verify user has access to this tenant
+            $membership = \App\Models\TenantMembership::where('user_id', $request->user()->id)
+                ->where('tenant_id', $id)
+                ->exists();
 
-        // Ensure we have a Tenant model instance
-        if (!($tenant instanceof Tenant)) {
-            $tenant = Tenant::find($tenant->id);
+            if (!$membership) {
+                abort(403, 'Unauthorized access to this tenant.');
+            }
+
+            $tenant = Tenant::findOrFail($id);
+        } else {
+            $tenant = tenant();
+
+            // Ensure we have a Tenant model instance
+            if (!($tenant instanceof Tenant)) {
+                $tenant = Tenant::find($tenant->id);
+            }
         }
 
         $validated = $request->validate([
@@ -280,9 +306,24 @@ class TenantController extends Controller
                 'max:50',
                 Rule::unique('tenants', 'short_name')->ignore($tenant->id)
             ],
+            'organizationLogo' => ['nullable'], // Allow file or string
         ]);
 
-        $tenant->update($validated);
+        // Handle Organization Logo if present
+        if ($request->hasFile('organizationLogo') || $request->input('organizationLogo')) {
+            $organization = $tenant->organizations()->orderBy('created_at', 'asc')->first();
+
+            if ($organization) {
+                if ($request->hasFile('organizationLogo')) {
+                    $path = $request->file('organizationLogo')->store('organizations/logos', 'public');
+                    $organization->update(['logo_url' => \Illuminate\Support\Facades\Storage::url($path)]);
+                } elseif (is_string($request->input('organizationLogo'))) {
+                    $organization->update(['logo_url' => $request->input('organizationLogo')]);
+                }
+            }
+        }
+
+        $tenant->update(collect($validated)->except('organizationLogo')->toArray());
 
         return new TenantResource($tenant);
     }

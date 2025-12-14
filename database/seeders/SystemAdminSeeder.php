@@ -1,0 +1,41 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\User;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Role;
+
+class SystemAdminSeeder extends Seeder
+{
+    /**
+     * Run the database seeds.
+     */
+    public function run(): void
+    {
+        // Check if role exists, if not create it (safe fallback)
+        $roleName = 'Super Admin';
+        if (!Role::where('name', $roleName)->exists()) {
+            Role::create(['name' => $roleName, 'guard_name' => 'web']);
+        }
+
+        $user = User::updateOrCreate(
+            ['email' => 'mofree81@gmail.com'],
+            [
+                'name' => 'Mohammed Salah',
+                'password' => Hash::make('Akwadna9892@Aasim@2025'),
+                'email_verified_at' => now(),
+                'is_system_admin' => true,
+                'status' => 'active',
+            ]
+        );
+
+        // Assign Super Admin role
+        if (!$user->hasRole($roleName)) {
+            $user->assignRole($roleName);
+        }
+
+        $this->command->info('System Admin seeded successfully: Mohammed Salah (mofree81@gmail.com)');
+    }
+}

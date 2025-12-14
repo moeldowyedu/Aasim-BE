@@ -79,6 +79,11 @@ Route::middleware(['check.subdomain:central'])->group(function () {
 
         // Public engines list
         Route::get('/engines', [EngineController::class, 'index']);
+
+        // Authenticated Central Routes
+        Route::middleware(['jwt.auth'])->group(function () {
+            Route::get('/tenants', [\App\Http\Controllers\Api\V1\TenantController::class, 'index']);
+        });
     });
 });
 

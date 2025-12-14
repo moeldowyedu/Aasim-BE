@@ -247,7 +247,6 @@ class AuthController extends Controller
                 'id' => $id, // ID IS the subdomain
                 'name' => $name,
                 'short_name' => $shortName, // Allow non-unique short name
-                'organization_name' => $name,
                 'type' => 'organization',
                 'status' => 'active',
                 'trial_ends_at' => now()->addDays(7),

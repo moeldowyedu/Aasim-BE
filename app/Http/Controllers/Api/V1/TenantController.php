@@ -123,34 +123,39 @@ class TenantController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'short_name' => ['nullable', 'string', 'max:50', 'unique:tenants,short_name'],
             'type' => ['required', 'string', 'in:organization,individual'],
-            'slug' => ['nullable', 'string', 'max:100', 'regex:/^[a-z0-9-]+$/', 'unique:tenants,slug'],
+            // 'slug' is no longer needed as a separate column, it will be the ID
+            'slug' => ['nullable', 'string', 'max:100', 'regex:/^[a-z0-9-]+$/', 'unique:tenants,id'],
         ]);
 
         try {
             return DB::transaction(function () use ($request, $validated) {
                 $user = $request->user();
 
-                // Generate slug if not provided
+                // Generate slug if not provided to serve as ID
                 $slug = $validated['slug'] ?? \Illuminate\Support\Str::slug($validated['name']);
 
-                // Ensure slug uniqueness
+                // Ensure slug uniqueness for ID
                 $originalSlug = $slug;
                 $counter = 1;
-                while (Tenant::where('slug', $slug)->exists()) {
+                while (Tenant::where('id', $slug)->exists()) {
                     $slug = $originalSlug . '-' . $counter;
                     $counter++;
                 }
 
+                $id = $slug; // The ID IS the slug/subdomain
+
                 // Create tenant
                 $tenant = Tenant::create([
-                    'id' => \Illuminate\Support\Str::uuid()->toString(),
+                    'id' => $id,
                     'name' => $validated['name'],
                     'short_name' => $validated['short_name'] ?? null,
-                    'slug' => $slug,
                     'type' => $validated['type'],
                     'status' => 'active',
-                    'setup_completed' => true,
-                    'setup_completed_at' => now(),
+                ]);
+
+                // Create Domain
+                $tenant->domains()->create([
+                    'domain' => $id . '.' . (config('tenancy.central_domains')[0] ?? 'obsolio.com'),
                 ]);
 
                 // Create tenant membership for the user as owner

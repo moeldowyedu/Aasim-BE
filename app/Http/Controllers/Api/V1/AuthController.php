@@ -232,8 +232,6 @@ class AuthController extends Controller
                 'type' => 'personal',
                 'status' => 'active',
                 'trial_ends_at' => now()->addDays(7),
-                'setup_completed' => true,
-                'setup_completed_at' => now(),
             ];
         } else {
             // Organization
@@ -250,8 +248,6 @@ class AuthController extends Controller
                 'type' => 'organization',
                 'status' => 'active',
                 'trial_ends_at' => now()->addDays(7),
-                'setup_completed' => true,
-                'setup_completed_at' => now(),
             ];
         }
     }

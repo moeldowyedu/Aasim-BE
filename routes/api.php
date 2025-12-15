@@ -87,6 +87,11 @@ Route::middleware(['check.subdomain:central'])->group(function () {
     });
 });
 
+// Public Admin Routes
+Route::middleware(['check.subdomain:admin'])->prefix('v1/auth')->group(function () {
+    Route::post('/login', [AuthController::class, 'login']);
+});
+
 // Admin Routes (Admin Domain)
 Route::middleware(['check.subdomain:admin', 'jwt.auth', 'system_admin'])->prefix('v1/admin')->group(function () {
     Route::get('/tenants', [\App\Http\Controllers\Api\V1\TenantController::class, 'indexAdmin']);

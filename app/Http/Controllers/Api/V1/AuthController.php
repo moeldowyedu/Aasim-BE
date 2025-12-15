@@ -412,27 +412,23 @@ class AuthController extends Controller
 
             // Domain Access Control
             if ($domainType === 'admin') {
-                // Only system admins on admin domain
-                $isSystemAdmin = $user->is_system_admin || in_array($user->role, ['system_owner', 'system_admin']);
-
-                if (!$isSystemAdmin) {
+                if (!$user->is_system_admin) {
                     auth('api')->logout();
-                    return response()->json(['success' => false, 'message' => 'Unauthorized access to admin portal'], 403);
+                    return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
                 }
+                // System Admin can login without specific tenant context
             } elseif ($domainType === 'tenant') {
-                // Tenant domain access check
+                // Tenant Domain Access Check
                 if (!$currentTenant) {
                     auth('api')->logout();
                     return response()->json(['success' => false, 'message' => 'Tenant context missing'], 400);
                 }
 
-                // Check if user belongs to this tenant
+                // Check tenant membership
                 $membership = $user->tenantMemberships()->where('tenant_id', $currentTenant->id)->exists();
-
-                // Also allow if user.tenant_id matches (legacy home tenant)
                 $isHomeTenant = $user->tenant_id === $currentTenant->id;
 
-                if (!$membership && !$isHomeTenant) {
+                if (!$user->is_system_admin && !$membership && !$isHomeTenant) {
                     auth('api')->logout();
                     return response()->json(['success' => false, 'message' => 'You do not have access to this workspace'], 403);
                 }

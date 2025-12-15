@@ -88,7 +88,8 @@ Route::middleware(['check.subdomain:central'])->group(function () {
 });
 
 // Public Admin Routes
-Route::middleware(['check.subdomain:admin'])->prefix('v1/auth')->group(function () {
+// Universal Login Route (Handles both Admin and Tenant contexts based on domain_type)
+Route::middleware(['check.subdomain'])->prefix('v1/auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
 });
 
@@ -104,8 +105,9 @@ Route::middleware(['check.subdomain:admin', 'jwt.auth', 'system_admin'])->prefix
 
 // Tenant Routes (Tenant Domain)
 // Public Tenant Routes
+// Tenant specific auth routes (excluding login which is universal)
 Route::middleware(['check.subdomain:tenant'])->prefix('v1')->group(function () {
-    Route::post('/auth/login', [AuthController::class, 'login']);
+    // Route::post('/auth/login', [AuthController::class, 'login']); // CONSOLIDATED ABOVE
 });
 
 // Authenticated Tenant Routes

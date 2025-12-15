@@ -50,8 +50,8 @@ class CompressResponse
     {
         $response = $next($request);
 
-        // Skip compression if disabled
-        if (!config('compression.enabled', true)) {
+        // Skip compression if disabled or if it's an OPTIONS request
+        if (!config('compression.enabled', true) || $request->isMethod('OPTIONS')) {
             return $response;
         }
 

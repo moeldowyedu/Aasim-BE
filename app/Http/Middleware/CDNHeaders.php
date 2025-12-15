@@ -22,8 +22,8 @@ class CDNHeaders
     {
         $response = $next($request);
 
-        // Only add headers for successful responses
-        if ($response->getStatusCode() !== 200) {
+        // Only add headers for successful responses and skip OPTIONS requests
+        if ($response->getStatusCode() !== 200 || $request->isMethod('OPTIONS')) {
             return $response;
         }
 

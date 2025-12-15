@@ -32,6 +32,15 @@ class CheckSubdomain
         ) {
             // Special case: API requests from Console are "Admin" context
             $origin = $request->headers->get('origin');
+
+            \Illuminate\Support\Facades\Log::info('CheckSubdomain Debug:', [
+                'host' => $host,
+                'parts' => $parts,
+                'origin' => $origin,
+                'matches_api' => $parts[0] === 'api',
+                'matches_console_origin' => $origin && (str_contains($origin, '//console.') || str_contains($origin, '//admin.'))
+            ]);
+
             if ($parts[0] === 'api' && $origin && (str_contains($origin, '//console.') || str_contains($origin, '//admin.'))) {
                 $domainType = 'admin';
                 $request->merge(['domain_type' => 'admin']);

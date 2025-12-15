@@ -24,7 +24,7 @@ class SystemAdminSeeder extends Seeder
             ['email' => 'mofree81@gmail.com'],
             [
                 'name' => 'Mohammed Salah',
-                'password' => Hash::make('Akwadna9892@Aasim@2025'),
+                'password' => 'Akwadna9892@Aasim@2025',
                 'email_verified_at' => now(),
                 'is_system_admin' => true,
                 'status' => 'active',

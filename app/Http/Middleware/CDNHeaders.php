@@ -23,7 +23,7 @@ class CDNHeaders
         $response = $next($request);
 
         // Only add headers for successful responses
-        if ($response->status() !== 200) {
+        if ($response->getStatusCode() !== 200) {
             return $response;
         }
 

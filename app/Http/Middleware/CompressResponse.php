@@ -82,7 +82,7 @@ class CompressResponse
     private function shouldSkipCompression($response): bool
     {
         // Skip if response is not successful
-        if ($response->status() < 200 || $response->status() >= 300) {
+        if ($response->getStatusCode() < 200 || $response->getStatusCode() >= 300) {
             return true;
         }
 

@@ -254,6 +254,93 @@ class AuthController extends Controller
 
     /**
      * @OA\Post(
+     *     path="/auth/lookup-tenant",
+     *     summary="Lookup tenants for a user",
+     *     operationId="lookupTenant",
+     *     tags={"Authentication"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"identifier"},
+     *             @OA\Property(property="identifier", type="string", example="john.doe@example.com", description="Email or Phone")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Tenant lookup successful",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="tenants", type="array", @OA\Items(
+     *                 @OA\Property(property="id", type="string", example="my-workspace"),
+     *                 @OA\Property(property="name", type="string", example="My Workspace"),
+     *                 @OA\Property(property="login_url", type="string", example="https://my-workspace.obsolio.com/login")
+     *             ))
+     *         )
+     *     )
+     * )
+     */
+    public function lookupTenant(Request $request): JsonResponse
+    {
+        $request->validate([
+            'identifier' => 'required|string',
+        ]);
+
+        $identifier = $request->identifier;
+
+        // Find user by email or phone
+        $user = User::where('email', $identifier)
+            ->orWhere('phone', $identifier)
+            ->first();
+
+        // Always return success with empty list if user not found (Prevent Enumeration)
+        if (!$user) {
+            return response()->json([
+                'success' => true,
+                'tenants' => [],
+            ]);
+        }
+
+        $tenants = collect();
+
+        // 1. Add Home Tenant
+        if ($user->tenant) {
+            $tenants->push($user->tenant);
+        }
+
+        // 2. Add Membership Tenants
+        $membershipTenants = $user->tenantMemberships()->with('tenant')->get()->pluck('tenant');
+        $tenants = $tenants->merge($membershipTenants)->unique('id');
+
+        $result = $tenants->map(function ($tenant) use ($request) {
+            if (!$tenant)
+                return null;
+
+            // Construct login URL
+            // Assuming tenant ID is the subdomain as established in register()
+            $domain = config('tenancy.central_domains')[0] ?? 'obsolio.com';
+            $protocol = $request->secure() ? 'https://' : 'http://';
+
+            // Adjust protocol for localhost dev if needed
+            if (str_contains($domain, 'localhost')) {
+                $protocol = 'http://';
+            }
+
+            return [
+                'id' => $tenant->id,
+                'name' => $tenant->name ?? $tenant->id,
+                'type' => $tenant->type ?? 'personal', // Fallback if type missing
+                'login_url' => "{$protocol}{$tenant->id}.{$domain}/login",
+            ];
+        })->filter()->values();
+
+        return response()->json([
+            'success' => true,
+            'tenants' => $result
+        ]);
+    }
+
+    /**
+     * @OA\Post(
      *     path="/auth/login",
      *     summary="Login user",
      *     operationId="login",
@@ -290,11 +377,22 @@ class AuthController extends Controller
      */
     public function login(LoginRequest $request): JsonResponse
     {
+        // STRICT CHECK: Ensure we are NOT on central domain
+        // This check complements the route definition change
+        $domainType = $request->get('domain_type');
+        $currentTenant = $request->get('tenant');
+
+        if ($domainType === 'central' && !$currentTenant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Login is not allowed on the central domain. Please use the tenant lookup endpoint.'
+            ], 403);
+        }
+
         $credentials = $request->only('email', 'password');
 
         try {
             if (!$token = auth('api')->attempt($credentials)) {
-                // ... log failed login ...
                 // Log failed login attempt
                 $user = User::where('email', $request->email)->first();
                 if ($user) {
@@ -308,8 +406,6 @@ class AuthController extends Controller
             }
 
             $user = auth('api')->user();
-            $domainType = $request->get('domain_type');
-            $currentTenant = $request->get('tenant');
 
             // Domain Access Control
             if ($domainType === 'admin') {
@@ -322,13 +418,15 @@ class AuthController extends Controller
                 }
             } elseif ($domainType === 'tenant') {
                 // Tenant domain access check
-                // 1. System admins can access if impersonating? (Impersonation handles token generation separately, so standard login might allow system admin to login to tenant? No, requirements say "System admins authenticate via admin subdomain only")
-                // So standard login here implies REGULAR user or Tenant Admin.
+                if (!$currentTenant) {
+                    auth('api')->logout();
+                    return response()->json(['success' => false, 'message' => 'Tenant context missing'], 400);
+                }
 
                 // Check if user belongs to this tenant
                 $membership = $user->tenantMemberships()->where('tenant_id', $currentTenant->id)->exists();
 
-                // Also allow if user.tenant_id matches (legacy single tenant user)
+                // Also allow if user.tenant_id matches (legacy home tenant)
                 $isHomeTenant = $user->tenant_id === $currentTenant->id;
 
                 if (!$membership && !$isHomeTenant) {
@@ -336,10 +434,8 @@ class AuthController extends Controller
                     return response()->json(['success' => false, 'message' => 'You do not have access to this workspace'], 403);
                 }
             }
-            // Central domain login might be restricted or redirect? 
-            // For now specific implementation not requested, assuming allowed if valid user.
 
-
+            // Re-fetch user to ensure we have fresh data
             $user = auth('api')->user();
 
             // Update last login

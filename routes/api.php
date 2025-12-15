@@ -69,7 +69,7 @@ Route::middleware(['check.subdomain:central'])->group(function () {
     Route::prefix('v1')->group(function () {
         // Authentication
         Route::post('/auth/register', [AuthController::class, 'register']);
-        Route::post('/auth/login', [AuthController::class, 'login']); // Login is shared but logic differs? Or specific logic in controller
+        Route::post('/auth/lookup-tenant', [AuthController::class, 'lookupTenant']); // New lookup endpoint
         Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);
         Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
 
@@ -98,6 +98,12 @@ Route::middleware(['check.subdomain:admin', 'jwt.auth', 'system_admin'])->prefix
 });
 
 // Tenant Routes (Tenant Domain)
+// Public Tenant Routes
+Route::middleware(['check.subdomain:tenant'])->prefix('v1')->group(function () {
+    Route::post('/auth/login', [AuthController::class, 'login']);
+});
+
+// Authenticated Tenant Routes
 Route::middleware(['check.subdomain:tenant', 'jwt.auth', 'tenant.status'])->prefix('v1')->group(function () {
     // Auth
     Route::post('/auth/logout', [AuthController::class, 'logout']);

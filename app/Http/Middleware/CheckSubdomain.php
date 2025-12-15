@@ -30,10 +30,16 @@ class CheckSubdomain
             ($parts[0] === 'www') ||
             ($parts[0] === 'api')
         ) {
-
-            $domainType = 'central';
-            $request->merge(['domain_type' => 'central']);
-        } elseif ($parts[0] === 'console') {
+            // Special case: API requests from Console are "Admin" context
+            $origin = $request->headers->get('origin');
+            if ($parts[0] === 'api' && $origin && (str_contains($origin, '//console.') || str_contains($origin, '//admin.'))) {
+                $domainType = 'admin';
+                $request->merge(['domain_type' => 'admin']);
+            } else {
+                $domainType = 'central';
+                $request->merge(['domain_type' => 'central']);
+            }
+        } elseif ($parts[0] === 'console' || $parts[0] === 'admin') {
             $domainType = 'admin';
             $request->merge(['domain_type' => 'admin']);
         } else {

@@ -37,6 +37,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Add global middleware
         $middleware->append(\App\Http\Middleware\CDNHeaders::class);
         $middleware->append(\App\Http\Middleware\CompressResponse::class);
+        $middleware->append(\App\Http\Middleware\AddTenantHeader::class); // ✅ Added Tenant Header Middleware
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

@@ -379,6 +379,10 @@ class TenantController extends Controller
      * Find tenant by subdomain (Public).
      * Used for the "Workspace Incomplete" page to determine status.
      */
+    /**
+     * Find tenant by subdomain (Public).
+     * Used for the "Workspace Incomplete" page to determine status.
+     */
     public function findBySubdomain(string $subdomain): JsonResponse
     {
         // Find tenant by ID (which is the subdomain/slug)
@@ -386,6 +390,7 @@ class TenantController extends Controller
 
         if (!$tenant) {
             return response()->json([
+                'success' => false,
                 'message' => 'Tenant not found',
             ], 404);
         }
@@ -394,13 +399,13 @@ class TenantController extends Controller
         $requiresVerification = $owner && !$owner->hasVerifiedEmail();
 
         return response()->json([
+            'success' => true,
             'data' => [
                 'id' => $tenant->id,
                 'name' => $tenant->name,
                 'status' => $tenant->status,
                 'requires_verification' => $requiresVerification,
                 'owner_id' => $owner?->id,
-                // Add masked email for UI if needed "Verification sent to a...s@domain.com"
                 'owner_email_masked' => $owner ? $this->maskEmail($owner->email) : null,
             ]
         ]);
@@ -415,6 +420,7 @@ class TenantController extends Controller
 
         if (!$tenant) {
             return response()->json([
+                'success' => false,
                 'message' => 'Tenant not found',
             ], 404);
         }
@@ -423,31 +429,52 @@ class TenantController extends Controller
 
         if (!$owner) {
             return response()->json([
+                'success' => false,
                 'message' => 'Tenant has no owner',
             ], 404);
         }
 
         if ($owner->hasVerifiedEmail()) {
             return response()->json([
+                'success' => false,
                 'message' => 'Email already verified',
             ], 400);
         }
 
-        $owner->sendEmailVerificationNotification();
+        try {
+            $owner->sendEmailVerificationNotification();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Verification email sent',
-        ]);
+            return response()->json([
+                'success' => true,
+                'message' => 'Verification email sent successfully',
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Failed to send verification email', [
+                'tenant_id' => $tenant->id,
+                'owner_id' => $owner->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to send verification email',
+            ], 500);
+        }
     }
 
-    private function maskEmail($email)
+    /**
+     * Mask email for privacy (show first and last character only)
+     */
+    private function maskEmail($email): ?string
     {
-        if (!$email)
+        if (!$email) {
             return null;
+        }
+
         $parts = explode('@', $email);
-        if (count($parts) != 2)
+        if (count($parts) !== 2) {
             return $email;
+        }
 
         $name = $parts[0];
         $domain = $parts[1];
@@ -457,7 +484,10 @@ class TenantController extends Controller
             return $name . '@' . $domain;
         }
 
-        $maskedName = substr($name, 0, 1) . str_repeat('*', $len - 2) . substr($name, -1);
+        $maskedName = substr($name, 0, 1)
+            . str_repeat('*', $len - 2)
+            . substr($name, -1);
+
         return $maskedName . '@' . $domain;
     }
 }

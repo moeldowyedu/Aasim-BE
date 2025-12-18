@@ -11,11 +11,15 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('country', 100)->nullable()->after('email');
+            if (!Schema::hasColumn('users', 'country')) {
+                $table->string('country', 100)->nullable()->after('email');
+            }
         });
 
         Schema::table('organizations', function (Blueprint $table) {
-            $table->string('short_name')->nullable()->after('name');
+            if (!Schema::hasColumn('organizations', 'short_name')) {
+                $table->string('short_name')->nullable()->after('name');
+            }
         });
     }
 
@@ -29,7 +33,9 @@ return new class extends Migration {
         });
 
         Schema::table('organizations', function (Blueprint $table) {
-            $table->dropColumn('short_name');
+            if (Schema::hasColumn('organizations', 'short_name')) {
+                $table->dropColumn('short_name');
+            }
         });
     }
 };

@@ -15,9 +15,11 @@ class UpdateOrganizationRequest extends FormRequest
     {
         return [
             'name' => ['sometimes', 'string', 'max:255'],
+            'short_name' => ['nullable', 'string', 'max:50'],
             'industry' => ['nullable', 'string', 'max:100'],
             'company_size' => ['nullable', 'string', 'max:50'],
             'country' => ['nullable', 'string', 'max:100'],
+            'phone' => ['nullable', 'string', 'max:50'],
             'timezone' => ['nullable', 'string', 'max:50'],
             'logo_url' => ['nullable'], // Allow file or string (validation handled in controller)
             'description' => ['nullable', 'string'],

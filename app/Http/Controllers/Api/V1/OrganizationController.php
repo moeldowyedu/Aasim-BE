@@ -59,7 +59,18 @@ class OrganizationController extends Controller
      *     security={{"bearerAuth":{}}},
      *     @OA\RequestBody(
      *         required=true,
-     *         @OA\JsonContent(type="object")
+     *         @OA\JsonContent(
+     *             required={"name"},
+     *             @OA\Property(property="name", type="string", example="Acme Corp"),
+     *             @OA\Property(property="short_name", type="string", example="ACME"),
+     *             @OA\Property(property="phone", type="string", example="+1234567890"),
+     *             @OA\Property(property="industry", type="string"),
+     *             @OA\Property(property="company_size", type="string"),
+     *             @OA\Property(property="country", type="string"),
+     *             @OA\Property(property="timezone", type="string"),
+     *             @OA\Property(property="description", type="string"),
+     *             @OA\Property(property="logo_url", type="string", format="uri")
+     *         )
      *     ),
      *     @OA\Response(
      *         response=201,
@@ -139,7 +150,18 @@ class OrganizationController extends Controller
      *     ),
      *     @OA\RequestBody(
      *         required=true,
-     *         @OA\JsonContent(type="object")
+     *         @OA\JsonContent(
+     *             @OA\Property(property="name", type="string", example="Acme Corp"),
+     *             @OA\Property(property="short_name", type="string", example="ACME"),
+     *             @OA\Property(property="phone", type="string", example="+1234567890"),
+     *             @OA\Property(property="industry", type="string"),
+     *             @OA\Property(property="company_size", type="string"),
+     *             @OA\Property(property="country", type="string"),
+     *             @OA\Property(property="timezone", type="string"),
+     *             @OA\Property(property="description", type="string"),
+     *             @OA\Property(property="logo_url", type="string", format="uri"),
+     *             @OA\Property(property="settings", type="object")
+     *         )
      *     ),
      *     @OA\Response(
      *         response=200,

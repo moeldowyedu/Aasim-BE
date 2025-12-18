@@ -15,9 +15,11 @@ class StoreOrganizationRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            'short_name' => ['nullable', 'string', 'max:50'],
             'industry' => ['nullable', 'string', 'max:100'],
             'company_size' => ['nullable', 'string', 'max:50'],
             'country' => ['nullable', 'string', 'max:100'],
+            'phone' => ['nullable', 'string', 'max:50'],
             'timezone' => ['nullable', 'string', 'max:50'],
             'logo_url' => ['nullable', 'url', 'max:500'],
             'description' => ['nullable', 'string'],

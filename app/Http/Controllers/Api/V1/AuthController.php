@@ -628,7 +628,9 @@ class AuthController extends Controller
      *                 @OA\Property(property="name", type="string", example="John Doe"),
      *                 @OA\Property(property="email", type="string", example="john.doe@example.com"),
      *                 @OA\Property(property="phone", type="string", example="+1234567890"),
+     *                 @OA\Property(property="country", type="string", example="USA"),
      *                 @OA\Property(property="status", type="string", example="active"),
+     *                 @OA\Property(property="is_system_admin", type="boolean", example=false),
      *                 @OA\Property(property="last_login_at", type="string", format="date-time", example="2023-10-27T10:00:00.000000Z"),
      *                 @OA\Property(property="created_at", type="string", format="date-time", example="2023-10-27T09:00:00.000000Z"),
      *                 @OA\Property(property="updated_at", type="string", format="date-time", example="2023-10-27T10:00:00.000000Z"),
@@ -784,6 +786,7 @@ class AuthController extends Controller
      *         @OA\JsonContent(
      *             @OA\Property(property="name", type="string", example="John Smith"),
      *             @OA\Property(property="phone", type="string", example="+1234567890"),
+     *             @OA\Property(property="country", type="string", example="USA"),
      *             @OA\Property(property="avatar_url", type="string", example="https://example.com/new-avatar.jpg")
      *         )
      *     ),

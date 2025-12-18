@@ -35,7 +35,9 @@ return new class extends Migration {
     {
         // 1. Drop short_name from organizations
         Schema::table('organizations', function (Blueprint $table) {
-            $table->dropColumn('short_name');
+            if (Schema::hasColumn('organizations', 'short_name')) {
+                $table->dropColumn('short_name');
+            }
         });
 
         // 2. Add unique constraint back to tenants

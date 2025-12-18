@@ -16,8 +16,11 @@ class TenantResource extends JsonResource
             'slug' => $this->slug,
             'type' => $this->type,
             'status' => $this->status,
+            'subdomain_preference' => $this->subdomain_preference,
+            'subdomain_activated_at' => $this->subdomain_activated_at,
             'trial_ends_at' => $this->trial_ends_at?->toIso8601String(),
             'is_on_trial' => $this->isOnTrial(),
+            'domains' => $this->domains->pluck('domain'),
             'user_role' => $this->whenLoaded('memberships', function () {
                 return $this->memberships->first()?->role;
             }),

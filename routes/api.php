@@ -4,32 +4,17 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\OrganizationController;
-// use App\Http\Controllers\Api\V1\BranchController;
-// use App\Http\Controllers\Api\V1\DepartmentController;
-// use App\Http\Controllers\Api\V1\ProjectController;
-// use App\Http\Controllers\Api\V1\TeamController;
-// use App\Http\Controllers\Api\V1\AgentController;
-// use App\Http\Controllers\Api\V1\WorkflowController;
-// use App\Http\Controllers\Api\V1\MarketplaceController;
-// use App\Http\Controllers\Api\V1\IntegrationController;
 use App\Http\Controllers\Api\V1\UserActivityController;
-// use App\Http\Controllers\Api\V1\SubscriptionController;
 use App\Http\Controllers\Api\V1\TenantController;
-// use App\Http\Controllers\Api\V1\HealthCheckController;
-// use App\Http\Controllers\Api\V1\MetricsController;
 use App\Http\Controllers\Api\V1\TenantSetupController;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
+use App\Http\Controllers\Api\Auth\VerificationController;
 
 /*
 |--------------------------------------------------------------------------
 | API Routes - Multi-Tenancy Structure
 |--------------------------------------------------------------------------
-|
-| Routes are separated into:
-| 1. CENTRAL ROUTES - Accessed from obsolio.com (public, no tenant context)
-| 2. TENANT ROUTES - Accessed from {subdomain}.obsolio.com (tenant-specific)
-|
 */
 
 // =============================================================================
@@ -37,52 +22,6 @@ use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 // =============================================================================
 
 Route::prefix('v1')->group(function () {
-
-    // =========================================================================
-    // PUBLIC AUTHENTICATION (Central Domain Only)
-    // =========================================================================
-    Route::post('/auth/register', [AuthController::class, 'register']);
-    Route::post('/auth/login', [AuthController::class, 'login']);
-    Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);
-    Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
-    Route::post('/auth/check-subdomain', [AuthController::class, 'checkSubdomain']);
-    Route::post('/auth/lookup-tenant', [AuthController::class, 'lookupTenant'])
-        ->withoutMiddleware(['tenancy.domain', 'tenancy.prevent_central', 'tenancy.header']); // Alias for frontend
-    Route::post('/auth/logout', [AuthController::class, 'logout'])->middleware('jwt.auth');
-    Route::get('/tenants/check-availability/{subdomain}', [AuthController::class, 'checkAvailability']);
-
-    // Tenant Verification Helpers (Public)
-    Route::get('/tenants/find-by-subdomain/{subdomain}', [TenantController::class, 'findBySubdomain']);
-    Route::post('/tenants/resend-verification/{subdomain}', [TenantController::class, 'resendVerification']);
-
-    // Email Verification Routes (No Auth Required)
-    Route::get('/auth/email/verify/{id}/{hash}', [AuthController::class, 'verify'])
-        ->middleware(['signed'])
-        ->name('verification.verify');
-    Route::post('/auth/email/resend', [AuthController::class, 'resendVerification'])
-        ->name('verification.resend');
-
-    // Alias routes for backward compatibility (without /auth prefix)
-    Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verify'])
-        ->middleware(['signed']);
-    Route::post('/email/resend', [AuthController::class, 'resendVerification']);
-
-    // =========================================================================
-    // PUBLIC MARKETPLACE (Central Domain Only)
-    // =========================================================================
-    // Route::get('/marketplace', [MarketplaceController::class, 'index']);
-    // Route::get('/marketplace/{id}', [MarketplaceController::class, 'show']);
-    // Route::get('/marketplace/search', [MarketplaceController::class, 'search']);
-    // Route::get('/marketplace/categories', [MarketplaceController::class, 'categories']);
-
-    // =========================================================================
-    // HEALTH CHECKS & MONITORING (No Auth)
-    // =========================================================================
-    // Route::get('/health', [HealthCheckController::class, 'index']);
-    // Route::get('/health/detailed', [HealthCheckController::class, 'detailed']);
-    // Route::get('/health/ready', [HealthCheckController::class, 'ready']);
-    // Route::get('/health/alive', [HealthCheckController::class, 'alive']);
-    // Route::get('/metrics', MetricsController::class);
 
     // =========================================================================
     // API WELCOME (No Auth)
@@ -94,6 +33,33 @@ Route::prefix('v1')->group(function () {
             'documentation' => url('/api/documentation'),
         ]);
     });
+
+    // =========================================================================
+    // EMAIL VERIFICATION (Public - No Auth Required)
+    // =========================================================================
+    Route::get('verify-email/{id}/{hash}', [VerificationController::class, 'verify'])
+        ->name('verification.verify');
+    Route::post('verify-email/{id}/{hash}', [VerificationController::class, 'verify']);
+    Route::post('resend-verification', [VerificationController::class, 'resend']);
+
+    // =========================================================================
+    // PUBLIC AUTHENTICATION (Central Domain Only)
+    // =========================================================================
+    Route::post('/auth/register', [AuthController::class, 'register']);
+    Route::post('/auth/login', [AuthController::class, 'login']);
+    Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);
+    Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
+    Route::post('/auth/check-subdomain', [AuthController::class, 'checkSubdomain']);
+    Route::post('/auth/lookup-tenant', [AuthController::class, 'lookupTenant'])
+        ->withoutMiddleware(['tenancy.domain', 'tenancy.prevent_central', 'tenancy.header']);
+    Route::post('/auth/logout', [AuthController::class, 'logout'])->middleware('jwt.auth');
+    Route::get('/tenants/check-availability/{subdomain}', [AuthController::class, 'checkAvailability']);
+
+    // =========================================================================
+    // TENANT VERIFICATION HELPERS (Public)
+    // =========================================================================
+    Route::get('/tenants/find-by-subdomain/{subdomain}', [TenantController::class, 'findBySubdomain']);
+    Route::post('/tenants/resend-verification/{subdomain}', [TenantController::class, 'resendVerification']);
 });
 
 // =============================================================================
@@ -104,11 +70,12 @@ Route::middleware([
     InitializeTenancyByDomain::class,
     PreventAccessFromCentralDomains::class,
 ])->prefix('v1')->group(function () {
-    // ... (Tenant Routes preserved) ...
+
     // =========================================================================
     // TENANT AUTHENTICATION (Requires JWT + Tenant Context)
     // =========================================================================
     Route::middleware(['jwt.auth', 'tenant.status'])->group(function () {
+        
         // Auth Management
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::post('/auth/refresh', [AuthController::class, 'refresh']);
@@ -142,39 +109,6 @@ Route::middleware([
         Route::apiResource('organizations', OrganizationController::class);
         Route::get('/organizations/{id}/dashboard', [OrganizationController::class, 'dashboard']);
 
-        // Route::apiResource('branches', BranchController::class);
-        // Route::get('/organizations/{organizationId}/branches', [BranchController::class, 'byOrganization']);
-
-        // Route::apiResource('departments', DepartmentController::class);
-        // Route::get('/organizations/{organizationId}/departments', [DepartmentController::class, 'byOrganization']);
-        // Route::get('/branches/{branchId}/departments', [DepartmentController::class, 'byBranch']);
-
-        // Route::apiResource('projects', ProjectController::class);
-        // Route::get('/departments/{departmentId}/projects', [ProjectController::class, 'byDepartment']);
-        // Route::put('/projects/{id}/status', [ProjectController::class, 'updateStatus']);
-
-        // Route::apiResource('teams', TeamController::class);
-        // Route::post('/teams/{id}/members', [TeamController::class, 'addMember']);
-        // Route::delete('/teams/{id}/members/{userId}', [TeamController::class, 'removeMember']);
-
-        // =====================================================================
-        // AGENTS & WORKFLOWS
-        // =====================================================================
-        // Route::apiResource('agents', AgentController::class);
-        // Route::post('/agents/{id}/execute', [AgentController::class, 'execute']);
-        // Route::get('/agents/{id}/executions', [AgentController::class, 'executions']);
-        // Route::get('/analytics/agents', [AgentController::class, 'analytics']);
-
-        // Route::apiResource('workflows', WorkflowController::class);
-        // Route::post('/workflows/{id}/execute', [WorkflowController::class, 'execute']);
-        // Route::get('/workflows/{id}/executions', [WorkflowController::class, 'executions']);
-
-        // =====================================================================
-        // INTEGRATIONS
-        // =====================================================================
-        // Route::apiResource('api-keys', IntegrationController::class);
-        // Route::post('/api-keys/{id}/regenerate', [IntegrationController::class, 'regenerate']);
-
         // =====================================================================
         // ACTIVITIES & MONITORING
         // =====================================================================
@@ -184,21 +118,6 @@ Route::middleware([
         Route::get('/sessions', [UserActivityController::class, 'sessions']);
         Route::get('/sessions/active', [UserActivityController::class, 'activeSessions']);
         Route::post('/sessions/{id}/terminate', [UserActivityController::class, 'terminateSession']);
-
-        // =====================================================================
-        // BILLING & SUBSCRIPTIONS
-        // =====================================================================
-        // Route::get('/subscriptions', [SubscriptionController::class, 'index']);
-        // Route::get('/subscriptions/current', [SubscriptionController::class, 'current']);
-        // Route::post('/subscriptions/subscribe', [SubscriptionController::class, 'subscribe']);
-        // Route::post('/subscriptions/cancel', [SubscriptionController::class, 'cancel']);
-        // Route::get('/subscriptions/usage', [SubscriptionController::class, 'usage']);
-
-        // =====================================================================
-        // TENANT MARKETPLACE (Authenticated)
-        // =====================================================================
-        // Route::post('/marketplace/{id}/purchase', [MarketplaceController::class, 'purchase']);
-        // Route::get('/marketplace/my-purchases', [MarketplaceController::class, 'myPurchases']);
     });
 });
 

@@ -74,6 +74,14 @@ class TenantSetupController extends Controller
 
                 $tenant->save();
 
+                // Create default organization 
+                \App\Models\Organization::create([
+                    'tenant_id' => $tenant->id,
+                    'name' => $tenant->organization_name,
+                    'short_name' => $tenant->slug, // Use slug as short_name
+                    'settings' => [],
+                ]);
+
                 // Update user with tenant_id
                 $user->update(['tenant_id' => $tenant->id]);
 

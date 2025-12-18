@@ -12,6 +12,24 @@ class Tenant extends BaseTenant implements TenantWithDatabase
     use HasDatabase, HasDomains;
 
     /**
+     * Retrieve the model for a bound value.
+     *
+     * @param  mixed  $value
+     * @param  string|null  $field
+     * @return \Illuminate\Database\Eloquent\Model|null
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        // If exact UUID match, use default binding
+        if (\Illuminate\Support\Str::isUuid($value)) {
+            return $this->where('id', $value)->firstOrFail();
+        }
+
+        // Otherwise try subdomain_preference
+        return $this->where('id', $value)->firstOrFail();
+    }
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>

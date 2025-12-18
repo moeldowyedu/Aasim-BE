@@ -422,13 +422,9 @@ class TenantController extends Controller
     public function update(Request $request, string $id = null): TenantResource
     {
         if ($id) {
-            // Verify user has access to this tenant
-            $membership = \App\Models\TenantMembership::where('user_id', $request->user()->id)
-                ->where('tenant_id', $id)
-                ->exists();
-
-            if (!$membership) {
-                abort(403, 'Unauthorized access to this tenant.');
+            // RESTRICT: Only System Admins can update tenant details.
+            if (!$request->user()->is_system_admin) {
+                abort(403, 'Only System Administrators can update tenant details. Please contact support or use the Organization settings.');
             }
 
             $tenant = Tenant::findOrFail($id);

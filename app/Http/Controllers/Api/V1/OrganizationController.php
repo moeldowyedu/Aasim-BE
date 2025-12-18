@@ -62,7 +62,6 @@ class OrganizationController extends Controller
     public function index(): AnonymousResourceCollection
     {
         $organizations = Organization::where('tenant_id', tenant('id'))
-            ->withCount(['users'])
             ->paginate(request('per_page', 15));
 
         return OrganizationResource::collection($organizations);

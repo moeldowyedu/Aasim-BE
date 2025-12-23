@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use OpenApi\Annotations as OA;
+use App\Models\ActivityLog;
 
 /**
  */
@@ -619,6 +620,109 @@ class TenantController extends Controller
                 'stats' => $stats,
             ],
         ]);
+    }
+    /**
+     * Suspend a tenant (System Admin Only).
+     * 
+     * @param string $id
+     * @return JsonResponse
+     */
+    public function suspend(string $id): JsonResponse
+    {
+        $tenant = Tenant::findOrFail($id);
+
+        // Check if already suspended
+        if ($tenant->status === 'suspended') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tenant is already suspended',
+            ], 400);
+        }
+
+        try {
+            $tenant->update([
+                'status' => 'suspended',
+            ]);
+
+            // Log the action
+            ActivityLog::logActivity(
+                auth()->id(),
+                'tenant_suspended',
+                "Suspended tenant: {$tenant->name} ({$tenant->id})",
+                [
+                    'tenant_id' => $tenant->id,
+                    'tenant_name' => $tenant->name,
+                    'admin_id' => auth()->id(),
+                ]
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Tenant suspended successfully',
+                'data' => [
+                    'tenant_id' => $tenant->id,
+                    'status' => $tenant->status,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to suspend tenant',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Activate a tenant (System Admin Only).
+     * 
+     * @param string $id
+     * @return JsonResponse
+     */
+    public function activate(string $id): JsonResponse
+    {
+        $tenant = Tenant::findOrFail($id);
+
+        // Check if already active
+        if ($tenant->status === 'active') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tenant is already active',
+            ], 400);
+        }
+
+        try {
+            $tenant->update([
+                'status' => 'active',
+            ]);
+
+            // Log the action
+            ActivityLog::logActivity(
+                auth()->id(),
+                'tenant_activated',
+                "Activated tenant: {$tenant->name} ({$tenant->id})",
+                [
+                    'tenant_id' => $tenant->id,
+                    'tenant_name' => $tenant->name,
+                    'admin_id' => auth()->id(),
+                ]
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Tenant activated successfully',
+                'data' => [
+                    'tenant_id' => $tenant->id,
+                    'status' => $tenant->status,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to activate tenant',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 }
 

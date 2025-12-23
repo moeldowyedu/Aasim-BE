@@ -1,8 +1,6 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 
 return new class extends Migration {
@@ -11,36 +9,30 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        // Step 1: Create temporary UUID column
-        Schema::table('tenants', function (Blueprint $table) {
-            $table->uuid('plan_id_temp')->nullable();
-        });
-
-        // Step 2: Copy data if any exists and is valid UUID format
-        DB::statement("
-            UPDATE tenants 
-            SET plan_id_temp = plan_id::uuid 
-            WHERE plan_id IS NOT NULL 
-            AND plan_id ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+        // Check if plan_id is already UUID type
+        $result = DB::select("
+            SELECT data_type 
+            FROM information_schema.columns 
+            WHERE table_name = 'tenants' 
+            AND column_name = 'plan_id'
         ");
 
-        // Step 3: Drop old varchar plan_id column
-        Schema::table('tenants', function (Blueprint $table) {
-            $table->dropColumn('plan_id');
-        });
+        $currentType = $result[0]->data_type ?? null;
 
-        // Step 4: Rename temporary column to plan_id
-        Schema::table('tenants', function (Blueprint $table) {
-            $table->renameColumn('plan_id_temp', 'plan_id');
-        });
+        if ($currentType === 'character varying' || $currentType === 'varchar') {
+            // Convert VARCHAR to UUID using raw SQL
+            DB::statement('ALTER TABLE tenants DROP COLUMN IF EXISTS plan_id');
+            DB::statement('ALTER TABLE tenants ADD COLUMN plan_id UUID');
+        }
 
-        // Step 5: Add foreign key constraint
-        Schema::table('tenants', function (Blueprint $table) {
-            $table->foreign('plan_id')
-                ->references('id')
-                ->on('subscription_plans')
-                ->onDelete('set null');
-        });
+        // Add foreign key constraint
+        DB::statement('
+            ALTER TABLE tenants 
+            ADD CONSTRAINT tenants_plan_id_foreign 
+            FOREIGN KEY (plan_id) 
+            REFERENCES subscription_plans(id) 
+            ON DELETE SET NULL
+        ');
     }
 
     /**
@@ -48,17 +40,8 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::table('tenants', function (Blueprint $table) {
-            // Drop foreign key
-            $table->dropForeign(['plan_id']);
-
-            // Drop UUID column
-            $table->dropColumn('plan_id');
-        });
-
-        // Restore original varchar column
-        Schema::table('tenants', function (Blueprint $table) {
-            $table->string('plan_id')->nullable();
-        });
+        DB::statement('ALTER TABLE tenants DROP CONSTRAINT IF EXISTS tenants_plan_id_foreign');
+        DB::statement('ALTER TABLE tenants DROP COLUMN IF EXISTS plan_id');
+        DB::statement('ALTER TABLE tenants ADD COLUMN plan_id VARCHAR(255)');
     }
 };

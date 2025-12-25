@@ -13,35 +13,51 @@ class Tenant extends BaseTenant implements TenantWithDatabase
 
     protected $fillable = [
         'id',
-        'plan_id',
         'organization_id',
         'name',
         'email',
         'phone',
         'type',
         'status',
-        'trial_ends_at',
         'subdomain_preference',
+        'subdomain_activated_at',
     ];
 
     protected $casts = [
-        'trial_ends_at' => 'datetime',
+        'subdomain_activated_at' => 'datetime',
     ];
 
     /**
-     * Get the subscription plan.
+     * Get the organization this tenant belongs to.
+     * (For organization-type tenants only, personal tenants return null)
      */
-    public function plan()
+    public function organization()
     {
-        return $this->belongsTo(SubscriptionPlan::class, 'plan_id');
+        return $this->belongsTo(Organization::class, 'organization_id');
     }
 
     /**
-     * Get the organizations for this tenant.
+     * Get all organizations for this tenant.
+     * (Legacy relationship - a tenant can have multiple organizations)
      */
     public function organizations()
     {
         return $this->hasMany(Organization::class);
+    }
+
+    /**
+     * Get the current subscription plan through active subscription.
+     */
+    public function currentPlan()
+    {
+        return $this->hasOneThrough(
+            SubscriptionPlan::class,
+            Subscription::class,
+            'tenant_id',
+            'id',
+            'id',
+            'plan_id'
+        )->whereIn('subscriptions.status', ['trialing', 'active']);
     }
 
     /**
@@ -105,21 +121,54 @@ class Tenant extends BaseTenant implements TenantWithDatabase
 
     /**
      * Check if tenant is on trial.
+     * Now checks the active subscription instead of tenant directly.
      */
     public function isOnTrial(): bool
     {
-        return $this->trial_ends_at && $this->trial_ends_at->isFuture();
+        $subscription = $this->activeSubscription;
+        return $subscription && $subscription->isOnTrial();
     }
 
     /**
      * Get days remaining in trial.
+     * Now delegates to active subscription.
      */
     public function trialDaysRemaining(): int
     {
-        if (!$this->trial_ends_at) {
-            return 0;
-        }
+        $subscription = $this->activeSubscription;
+        return $subscription ? $subscription->trialDaysRemaining() : 0;
+    }
 
-        return max(0, now()->diffInDays($this->trial_ends_at, false));
+    /**
+     * Check if tenant has an active subscription.
+     */
+    public function hasActiveSubscription(): bool
+    {
+        return $this->activeSubscription()->exists();
+    }
+
+    /**
+     * Get the current billing cycle.
+     */
+    public function billingCycle(): ?string
+    {
+        $subscription = $this->activeSubscription;
+        return $subscription?->billing_cycle;
+    }
+
+    /**
+     * Check if tenant is a personal account.
+     */
+    public function isPersonal(): bool
+    {
+        return $this->type === 'personal';
+    }
+
+    /**
+     * Check if tenant is an organization account.
+     */
+    public function isOrganization(): bool
+    {
+        return $this->type === 'organization';
     }
 }

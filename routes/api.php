@@ -11,6 +11,7 @@ use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 use App\Http\Controllers\Api\Auth\VerificationController;
 use App\Http\Controllers\Api\V1\AdminController;
+use App\Http\Controllers\Api\V1\Admin\TenantManagementController;
 use App\Http\Controllers\Api\V1\SubscriptionPlanController;
 use App\Http\Controllers\Api\V1\SubscriptionController;
 use App\Http\Controllers\Api\V1\AgentController;
@@ -200,12 +201,14 @@ Route::prefix('v1/admin')->middleware(['jwt.auth', 'system_admin'])->group(funct
     // =========================================================================
     // TENANT MANAGEMENT
     // =========================================================================
-    Route::get('/tenants', [TenantController::class, 'indexAdmin']);
-    Route::get('/tenants/{id}', [TenantController::class, 'showAdmin']);
-    Route::put('/tenants/{id}', [TenantController::class, 'updateAdmin']);
-    Route::delete('/tenants/{id}', [TenantController::class, 'deleteAdmin']);
-    Route::post('/tenants/{id}/suspend', [TenantController::class, 'suspend']);
-    Route::post('/tenants/{id}/activate', [TenantController::class, 'activate']);
+    Route::get('/tenants', [TenantManagementController::class, 'index']);
+    Route::get('/tenants/statistics', [TenantManagementController::class, 'statistics']);
+    Route::get('/tenants/{id}', [TenantManagementController::class, 'show']);
+    Route::put('/tenants/{id}/status', [TenantManagementController::class, 'updateStatus']);
+    Route::put('/tenants/{id}/subscription', [TenantManagementController::class, 'changeSubscription']);
+    Route::get('/tenants/{id}/subscriptions', [TenantManagementController::class, 'subscriptionHistory']);
+    Route::post('/tenants/{id}/extend-trial', [TenantManagementController::class, 'extendTrial']);
+    Route::delete('/tenants/{id}', [TenantManagementController::class, 'destroy']);
 
     // =========================================================================
     // USER MANAGEMENT

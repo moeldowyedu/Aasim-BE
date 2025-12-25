@@ -23,13 +23,20 @@ class SubscriptionPlan extends Model
         'price_monthly',
         'price_annual',
         'features',
+        'highlight_features',
         'limits',
         'max_users',
         'max_agents',
         'storage_gb',
         'is_active',
+        'is_published',
+        'is_archived',
+        'plan_version',
+        'parent_plan_id',
+        'display_order',
         'trial_days',
         'description',
+        'metadata',
     ];
 
     /**
@@ -39,8 +46,12 @@ class SubscriptionPlan extends Model
      */
     protected $casts = [
         'features' => 'array',
+        'highlight_features' => 'array',
         'limits' => 'array',
+        'metadata' => 'array',
         'is_active' => 'boolean',
+        'is_published' => 'boolean',
+        'is_archived' => 'boolean',
         'price_monthly' => 'decimal:2',
         'price_annual' => 'decimal:2',
     ];
@@ -54,11 +65,19 @@ class SubscriptionPlan extends Model
     }
 
     /**
-     * Get the tenants using this plan.
+     * Get the parent plan (for versioned plans).
      */
-    public function tenants(): HasMany
+    public function parentPlan()
     {
-        return $this->hasMany(Tenant::class, 'plan_id');
+        return $this->belongsTo(SubscriptionPlan::class, 'parent_plan_id');
+    }
+
+    /**
+     * Get child plans (plan versions).
+     */
+    public function childPlans()
+    {
+        return $this->hasMany(SubscriptionPlan::class, 'parent_plan_id');
     }
 
     /**
@@ -114,5 +133,66 @@ class SubscriptionPlan extends Model
         $savings = $monthlyYearly - $this->price_annual;
 
         return (int) round(($savings / $monthlyYearly) * 100);
+    }
+
+    /**
+     * Check if plan is published and available for selection.
+     */
+    public function isPublished(): bool
+    {
+        return $this->is_published && $this->is_active && !$this->is_archived;
+    }
+
+    /**
+     * Check if plan is archived.
+     */
+    public function isArchived(): bool
+    {
+        return $this->is_archived;
+    }
+
+    /**
+     * Scope to get only published plans.
+     */
+    public function scopePublished($query)
+    {
+        return $query->where('is_published', true)
+            ->where('is_active', true)
+            ->where('is_archived', false);
+    }
+
+    /**
+     * Scope to get plans by type.
+     */
+    public function scopeByType($query, string $type)
+    {
+        return $query->where('type', $type);
+    }
+
+    /**
+     * Scope to get active plans.
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true)
+            ->where('is_archived', false);
+    }
+
+    /**
+     * Get the display name with tier.
+     */
+    public function getDisplayName(): string
+    {
+        return "{$this->name} ({$this->tier})";
+    }
+
+    /**
+     * Count active subscriptions for this plan.
+     */
+    public function activeSubscriptionsCount(): int
+    {
+        return $this->subscriptions()
+            ->whereIn('status', ['trialing', 'active'])
+            ->count();
     }
 }

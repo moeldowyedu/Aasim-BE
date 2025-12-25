@@ -8,9 +8,11 @@ use App\Events\HITLApprovalRequested;
 use App\Events\WorkflowCompleted;
 use App\Events\WorkflowFailed;
 use App\Listeners\AlertOnExecutionFailure;
+use App\Listeners\CreateTrialSubscription;
 use App\Listeners\NotifyUserOfExecutionCompletion;
 use App\Listeners\NotifyUserOfWorkflowCompletion;
 use App\Listeners\SendHITLApprovalNotification;
+use Illuminate\Auth\Events\Verified;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 
 class EventServiceProvider extends ServiceProvider
@@ -35,6 +37,9 @@ class EventServiceProvider extends ServiceProvider
         ],
         HITLApprovalRequested::class => [
             SendHITLApprovalNotification::class,
+        ],
+        Verified::class => [
+            CreateTrialSubscription::class,
         ],
     ];
 

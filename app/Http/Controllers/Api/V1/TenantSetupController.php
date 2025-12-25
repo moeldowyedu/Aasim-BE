@@ -22,8 +22,6 @@ class TenantSetupController extends Controller
         $request->validate([
             'organization_name' => ['required', 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:100', 'regex:/^[a-z0-9-]+$/', 'unique:tenants,slug'],
-            'plan_id' => ['nullable', 'string', 'max:100'],
-            'billing_cycle' => ['nullable', 'string', 'in:monthly,yearly'],
             'billing_info' => ['nullable', 'array'],
         ]);
 
@@ -60,8 +58,6 @@ class TenantSetupController extends Controller
                 $tenant->organization_name = $request->organization_name;
                 $tenant->slug = $slug;
                 $tenant->type = 'organization';
-                $tenant->plan_id = $request->plan_id;
-                $tenant->billing_cycle = $request->billing_cycle;
                 $tenant->setup_completed = true;
                 $tenant->setup_completed_at = now();
 
@@ -135,7 +131,6 @@ class TenantSetupController extends Controller
     {
         $request->validate([
             'workspace_name' => ['nullable', 'string', 'max:255'],
-            'plan_id' => ['nullable', 'string', 'max:100'],
         ]);
 
         try {
@@ -173,7 +168,6 @@ class TenantSetupController extends Controller
                 $tenant->name = $workspaceName;
                 $tenant->slug = $slug;
                 $tenant->type = 'individual';
-                $tenant->plan_id = $request->plan_id ?? 'free'; // Default to free plan for personal
                 $tenant->setup_completed = true;
                 $tenant->setup_completed_at = now();
                 $tenant->save();

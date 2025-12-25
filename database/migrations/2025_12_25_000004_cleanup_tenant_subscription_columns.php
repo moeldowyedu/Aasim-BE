@@ -5,8 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      *
@@ -28,7 +27,7 @@ return new class extends Migration
                 ");
 
                 foreach ($foreignKeys as $fk) {
-                    $table->dropForeign([$fk->constraint_name]);
+                    $table->dropForeign($fk->constraint_name);
                 }
 
                 $table->dropColumn('plan_id');
@@ -84,10 +83,10 @@ return new class extends Migration
             DB::table('tenants')
                 ->where('id', $subscription->tenant_id)
                 ->update([
-                    'plan_id' => $subscription->plan_id,
-                    'billing_cycle' => $subscription->billing_cycle,
-                    'trial_ends_at' => $subscription->trial_ends_at,
-                ]);
+                        'plan_id' => $subscription->plan_id,
+                        'billing_cycle' => $subscription->billing_cycle,
+                        'trial_ends_at' => $subscription->trial_ends_at,
+                    ]);
         }
 
         echo "✅ Restored subscription columns to tenants table\n";

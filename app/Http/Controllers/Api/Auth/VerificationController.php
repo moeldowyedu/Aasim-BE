@@ -148,15 +148,11 @@ class VerificationController extends Controller
             }
         }
 
-        // DEBUG: Dump info directly to browser
-        dd([
-            'status' => 'Signature Validation Failed',
+        Log::warning('Signature validation failed', [
+            'user_id' => $user->id,
+            'checked_count' => count($urls),
             'received_signature' => $signature,
-            'checked_urls' => $urls,
-            'expected_hashes' => array_map(fn($u) => hash_hmac('sha256', $u, config('app.key')), $urls),
-            'app_key_set' => !empty(config('app.key')),
-            'request_path' => $request->path(),
-            'request_query' => $request->query(),
+            'checked_urls' => $urls
         ]);
 
         return false;

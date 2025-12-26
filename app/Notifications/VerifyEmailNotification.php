@@ -13,15 +13,29 @@ class VerifyEmailNotification extends VerifyEmail
      */
     protected function verificationUrl($notifiable)
     {
-        // Generate the API verification URL with signature
-        $apiUrl = URL::temporarySignedRoute(
-            'verification.verify',
-            Carbon::now()->addHours(24),
-            [
-                'id' => $notifiable->getKey(),
-                'hash' => sha1($notifiable->getEmailForVerification()),
-            ]
-        );
+        // ⚠️ CRITICAL: Force API domain for signature generation
+        // The signature MUST match the domain where the request is processed (api.obsolio.com)
+        // even if APP_URL is set to something else (e.g. obsolio.com)
+        $currentRoot = URL::formatRoot('', '');
+
+        // We'll use the API domain from config if available, otherwise fallback to known API domain
+        // Or simply force 'https://api.obsolio.com' since we know that's the backend
+        URL::forceRootUrl('https://api.obsolio.com');
+
+        try {
+            // Generate the API verification URL with signature
+            $apiUrl = URL::temporarySignedRoute(
+                'verification.verify',
+                Carbon::now()->addHours(24),
+                [
+                    'id' => $notifiable->getKey(),
+                    'hash' => sha1($notifiable->getEmailForVerification()),
+                ]
+            );
+        } finally {
+            // Restore original root to avoid side effects
+            URL::forceRootUrl($currentRoot);
+        }
 
         // Parse the API URL to extract query parameters
         $urlParts = parse_url($apiUrl);

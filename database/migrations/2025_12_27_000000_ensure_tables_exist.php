@@ -68,6 +68,49 @@ return new class extends Migration {
                 $table->index(['tenant_id', 'status']);
             });
         }
+
+        // 3. Ensure 'workflows' table exists
+        if (!Schema::hasTable('workflows')) {
+            Schema::create('workflows', function (Blueprint $table) {
+                $table->uuid('id')->primary();
+                $table->string('tenant_id');
+                $table->unsignedBigInteger('created_by_user_id')->nullable();
+                $table->string('name');
+                $table->text('description')->nullable();
+                $table->uuid('organization_id')->nullable();
+                $table->uuid('department_id')->nullable();
+                $table->uuid('project_id')->nullable();
+                $table->jsonb('nodes');
+                $table->jsonb('edges');
+                $table->jsonb('config')->nullable();
+                $table->enum('status', ['draft', 'active', 'inactive'])->default('draft');
+                $table->timestamps();
+
+                $table->foreign('tenant_id')->references('id')->on('tenants')->cascadeOnDelete();
+                $table->foreign('created_by_user_id')->references('id')->on('users')->nullOnDelete();
+                $table->foreign('organization_id')->references('id')->on('organizations')->nullOnDelete();
+            });
+        }
+
+        // 4. Ensure 'workflow_executions' table exists
+        if (!Schema::hasTable('workflow_executions')) {
+            Schema::create('workflow_executions', function (Blueprint $table) {
+                $table->uuid('id')->primary();
+                $table->uuid('workflow_id');
+                $table->string('tenant_id');
+                $table->unsignedBigInteger('triggered_by_user_id')->nullable();
+                $table->enum('status', ['running', 'completed', 'failed', 'cancelled'])->default('running');
+                $table->timestamp('started_at')->useCurrent();
+                $table->timestamp('completed_at')->nullable();
+                $table->jsonb('execution_data')->nullable();
+                $table->text('error_message')->nullable();
+                $table->timestamp('created_at')->useCurrent();
+
+                $table->foreign('workflow_id')->references('id')->on('workflows')->cascadeOnDelete();
+                $table->foreign('tenant_id')->references('id')->on('tenants')->cascadeOnDelete();
+                $table->foreign('triggered_by_user_id')->references('id')->on('users')->nullOnDelete();
+            });
+        }
     }
 
     /**

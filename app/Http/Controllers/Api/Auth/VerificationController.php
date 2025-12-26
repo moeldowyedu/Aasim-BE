@@ -163,7 +163,15 @@ class VerificationController extends Controller
     {
         $path = $request->path();
         $query = $request->query();
+
+        // Remove signature from comparison
         unset($query['signature']);
+
+        // Remove redundant path parameters that might be in query string
+        // The frontend often sends ?id=...&hash=... which breaks signature validation
+        // because the original signature was generated for the path parameters only.
+        unset($query['id']);
+        unset($query['hash']);
 
         $url = $baseUrl . '/' . $path;
 

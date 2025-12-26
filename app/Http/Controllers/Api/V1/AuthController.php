@@ -131,7 +131,6 @@ class AuthController extends Controller
                         : ($request->organizationShortName ?? $request->subdomain),
                     'type' => $request->type,
                     'status' => 'pending_verification', // ⚠️ IMPORTANT
-                    'trial_ends_at' => now()->addDays(7),
                 ];
 
                 $tenant = Tenant::create($tenantData);

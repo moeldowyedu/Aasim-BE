@@ -117,9 +117,20 @@ class VerificationController extends Controller
             $this->buildUrl($request, 'https://api.obsolio.com'),
         ];
 
+        Log::info('Validating Signature', [
+            'received_signature' => $signature,
+            'checking_urls' => $urls
+        ]);
+
         // Check if signature matches either URL
         foreach ($urls as $url) {
             $expected = hash_hmac('sha256', $url, config('app.key'));
+
+            Log::debug('Signature check', [
+                'url' => $url,
+                'expected' => $expected,
+                'match' => hash_equals($expected, $signature)
+            ]);
 
             if (hash_equals($expected, $signature)) {
                 return true;

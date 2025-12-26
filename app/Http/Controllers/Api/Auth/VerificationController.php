@@ -111,31 +111,47 @@ class VerificationController extends Controller
     {
         $signature = $request->get('signature');
 
-        // Build URLs to check (both domains)
-        $urls = [
-            $this->buildUrl($request, 'https://obsolio.com'),
-            $this->buildUrl($request, 'https://api.obsolio.com'),
+        // Extract hosts to check
+        $hosts = [
+            'obsolio.com',
+            'api.obsolio.com',
+            parse_url(config('app.url'), PHP_URL_HOST),
+            config('tenancy.central_domains')[0] ?? null
         ];
+
+        // Filter valid unique hosts
+        $hosts = array_unique(array_filter($hosts));
+
+        $schemes = ['http://', 'https://'];
+        $urls = [];
+
+        foreach ($hosts as $host) {
+            foreach ($schemes as $scheme) {
+                $urls[] = $this->buildUrl($request, $scheme . $host);
+            }
+        }
 
         Log::info('Validating Signature', [
             'received_signature' => $signature,
-            'checking_urls' => $urls
+            'checking_urls_count' => count($urls),
+            // Log first few to debug structure without spamming
+            'first_url_check' => $urls[0] ?? null
         ]);
 
-        // Check if signature matches either URL
+        // Check if signature matches any URL
         foreach ($urls as $url) {
             $expected = hash_hmac('sha256', $url, config('app.key'));
 
-            Log::debug('Signature check', [
-                'url' => $url,
-                'expected' => $expected,
-                'match' => hash_equals($expected, $signature)
-            ]);
-
-            if (hash_equals($expected, $signature)) {
+            if (hash_equals($expected, (string) $signature)) {
+                Log::info('Signature matched', ['url' => $url]);
                 return true;
             }
         }
+
+        Log::warning('Signature validation failed', [
+            'user_id' => $user->id,
+            'checked_count' => count($urls)
+        ]);
 
         return false;
     }

@@ -15,14 +15,7 @@ return [
      *
      * Only relevant if you're using the domain or subdomain identification middleware.
      */
-    'central_domains' => [
-        '127.0.0.1',
-        'localhost',
-        'obsolio.com',           // ✅ Production marketing domain
-        'www.obsolio.com',       // ✅ WWW variant
-        'api.obsolio.com',       // ✅ API domain (if used separately)
-        'console.obsolio.com',   // ✅ System admin console
-    ],
+    'central_domains' => array_filter(array_map('trim', explode(',', env('TENANCY_CENTRAL_DOMAINS', 'obsolio.com,api.obsolio.com,127.0.0.1,localhost')))),
 
     /**
      * Tenancy bootstrappers are executed when tenancy is initialized.

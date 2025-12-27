@@ -174,6 +174,14 @@ class Organization extends Model
     }
 
     /**
+     * Get the users for the organization (via tenant).
+     */
+    public function users(): HasMany
+    {
+        return $this->hasMany(User::class, 'tenant_id', 'tenant_id');
+    }
+
+    /**
      * Get the workflows for the organization.
      */
     public function workflows(): HasMany

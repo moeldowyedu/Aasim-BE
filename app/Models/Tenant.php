@@ -24,6 +24,21 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         'subdomain_activated_at',
     ];
 
+    public static function getCustomColumns(): array
+    {
+        return [
+            'id',
+            'organization_id',
+            'name',
+            'short_name',
+            'type',
+            'status',
+            'subdomain_preference',
+            'subdomain_activated_at',
+            'domain',
+        ];
+    }
+
     /**
      * Get the owner membership.
      */

@@ -15,7 +15,7 @@ use App\Http\Controllers\Api\V1\Admin\TenantManagementController;
 use App\Http\Controllers\Api\V1\SubscriptionPlanController;
 use App\Http\Controllers\Api\V1\SubscriptionController;
 use App\Http\Controllers\Api\V1\AgentController;
-use AppHttpControllersApiV1AgentExecutionController;
+use App\Http\Controllers\Api\V1\AgentExecutionController;
 use App\Http\Controllers\Api\V1\MarketplaceController;
 use App\Http\Controllers\Api\V1\BillingController;
 use App\Http\Controllers\Api\V1\PaymentController;

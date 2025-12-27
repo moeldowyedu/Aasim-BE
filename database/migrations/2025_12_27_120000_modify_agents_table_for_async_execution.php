@@ -9,17 +9,16 @@ return new class extends Migration {
     /**
      * Run the migrations.
      *
-     * This migration modifies the existing agents table to support asynchronous execution:
+     * This migration adds new columns to the agents table:
      * - Adds columns: runtime_type (nullable), execution_timeout_ms
-     * - Removes columns: category, total_installs, rating, review_count, is_marketplace
      *
-     * Note: The runtime_type column is kept nullable here. The NOT NULL constraint
-     * will be added in migration 2025_12_27_130000_finalize_agents_table_changes.php
-     * AFTER the data migration populates the values.
+     * Note: Old columns (category, total_installs, etc.) are NOT removed here.
+     * They will be removed in migration 2025_12_27_130000_finalize_agents_table_changes.php
+     * AFTER the data migration reads from them.
      */
     public function up(): void
     {
-        // STEP 1: Add new columns (runtime_type is nullable for now)
+        // Add new columns (runtime_type is nullable for now)
         Schema::table('agents', function (Blueprint $table) {
             // Check if columns don't already exist
             if (!Schema::hasColumn('agents', 'runtime_type')) {
@@ -34,35 +33,6 @@ return new class extends Migration {
                     ->default(30000)
                     ->after('created_by_user_id')
                     ->comment('Maximum execution time in milliseconds (default: 30 seconds)');
-            }
-        });
-
-        // STEP 2: Remove old columns
-        Schema::table('agents', function (Blueprint $table) {
-            // Drop indexes first if they exist (using DB::statement for safety)
-            // Note: We use raw SQL to avoid Laravel's index name generation issues
-            try {
-                if (Schema::hasColumn('agents', 'category')) {
-                    DB::statement('DROP INDEX IF EXISTS agents_category_index');
-                    DB::statement('DROP INDEX IF EXISTS agents_category_is_active_index');
-                }
-                if (Schema::hasColumn('agents', 'is_marketplace')) {
-                    DB::statement('DROP INDEX IF EXISTS agents_is_marketplace_index');
-                }
-            } catch (\Exception $e) {
-                // Indexes might not exist, that's okay
-            }
-
-            // Remove columns that are no longer needed
-            $columns_to_drop = [];
-            if (Schema::hasColumn('agents', 'category')) $columns_to_drop[] = 'category';
-            if (Schema::hasColumn('agents', 'total_installs')) $columns_to_drop[] = 'total_installs';
-            if (Schema::hasColumn('agents', 'rating')) $columns_to_drop[] = 'rating';
-            if (Schema::hasColumn('agents', 'review_count')) $columns_to_drop[] = 'review_count';
-            if (Schema::hasColumn('agents', 'is_marketplace')) $columns_to_drop[] = 'is_marketplace';
-
-            if (!empty($columns_to_drop)) {
-                $table->dropColumn($columns_to_drop);
             }
         });
     }

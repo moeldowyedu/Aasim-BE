@@ -11,19 +11,21 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('agent_categories', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->string('name');
-            $table->string('slug')->unique();
-            $table->text('description')->nullable();
-            $table->string('icon')->nullable();
-            $table->integer('display_order')->default(0);
-            $table->timestamps();
+        if (!Schema::hasTable('agent_categories')) {
+            Schema::create('agent_categories', function (Blueprint $table) {
+                $table->uuid('id')->primary();
+                $table->string('name');
+                $table->string('slug')->unique();
+                $table->text('description')->nullable();
+                $table->string('icon')->nullable();
+                $table->integer('display_order')->default(0);
+                $table->timestamps();
 
-            // Indexes
-            $table->index('slug');
-            $table->index('display_order');
-        });
+                // Indexes
+                $table->index('slug');
+                $table->index('display_order');
+            });
+        }
     }
 
     /**

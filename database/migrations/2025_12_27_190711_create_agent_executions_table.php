@@ -11,36 +11,38 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('agent_executions', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->uuid('agent_id');
-            $table->uuid('user_id')->nullable();
-            $table->enum('status', ['pending', 'running', 'completed', 'failed'])->default('pending');
-            $table->jsonb('input')->nullable();
-            $table->jsonb('output')->nullable();
-            $table->text('error')->nullable();
-            $table->timestamp('started_at')->nullable();
-            $table->timestamp('completed_at')->nullable();
-            $table->timestamps();
+        if (!Schema::hasTable('agent_executions')) {
+            Schema::create('agent_executions', function (Blueprint $table) {
+                $table->uuid('id')->primary();
+                $table->uuid('agent_id');
+                $table->uuid('user_id')->nullable();
+                $table->enum('status', ['pending', 'running', 'completed', 'failed'])->default('pending');
+                $table->jsonb('input')->nullable();
+                $table->jsonb('output')->nullable();
+                $table->text('error')->nullable();
+                $table->timestamp('started_at')->nullable();
+                $table->timestamp('completed_at')->nullable();
+                $table->timestamps();
 
-            // Foreign Keys
-            $table->foreign('agent_id')
-                ->references('id')
-                ->on('agents')
-                ->onDelete('cascade');
+                // Foreign Keys
+                $table->foreign('agent_id')
+                    ->references('id')
+                    ->on('agents')
+                    ->onDelete('cascade');
 
-            $table->foreign('user_id')
-                ->references('id')
-                ->on('users')
-                ->onDelete('set null');
+                $table->foreign('user_id')
+                    ->references('id')
+                    ->on('users')
+                    ->onDelete('set null');
 
-            // Indexes
-            $table->index('agent_id');
-            $table->index('user_id');
-            $table->index('status');
-            $table->index('started_at');
-            $table->index(['agent_id', 'status']);
-        });
+                // Indexes
+                $table->index('agent_id');
+                $table->index('user_id');
+                $table->index('status');
+                $table->index('started_at');
+                $table->index(['agent_id', 'status']);
+            });
+        }
     }
 
     /**

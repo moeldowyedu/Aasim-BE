@@ -14,9 +14,11 @@ const PaymobCheckout = ({ plan, billingCycle, user, onPaymentSuccess, onPaymentE
             const response = await axios.post('/api/v1/payments/subscription', {
                 plan_id: plan.id,
                 billing_cycle: billingCycle,
+                user_id: user.id,
+                tenant_id: user.tenant_id // Ensure user prop has this, or use tenancy context from store if available
             }, {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`, // Adjust auth header usage as per your app
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
                 }
             });
 
@@ -59,7 +61,7 @@ const PaymobCheckout = ({ plan, billingCycle, user, onPaymentSuccess, onPaymentE
         return (
             <div className="p-4 bg-red-50 border border-red-200 rounded-md text-red-600 text-center">
                 <p>{error}</p>
-                <button 
+                <button
                     onClick={initiatePayment}
                     className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
                 >

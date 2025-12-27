@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\V1\Admin\TenantManagementController;
 use App\Http\Controllers\Api\V1\SubscriptionPlanController;
 use App\Http\Controllers\Api\V1\SubscriptionController;
 use App\Http\Controllers\Api\V1\AgentController;
+use AppHttpControllersApiV1AgentExecutionController;
 use App\Http\Controllers\Api\V1\MarketplaceController;
 use App\Http\Controllers\Api\V1\BillingController;
 use App\Http\Controllers\Api\V1\PaymentController;
@@ -171,6 +172,24 @@ Route::middleware([
             Route::post('/{id}/toggle-status', [AgentController::class, 'toggleStatus']);
             Route::post('/{id}/record-usage', [AgentController::class, 'recordUsage']);
         });
+
+        // =====================================================================
+        // AGENT EXECUTION (Async)
+        // =====================================================================
+        Route::prefix('agents')->group(function () {
+            Route::post('/{id}/run', [AgentExecutionController::class, 'run']);
+        });
+
+        Route::prefix('agent-runs')->group(function () {
+            Route::get('/{run_id}', [AgentExecutionController::class, 'getRunStatus']);
+        });
+
+        // =====================================================================
+        // WEBHOOK CALLBACKS (Agents send results here)
+        // =====================================================================
+        Route::post('/webhooks/agents/callback', [AgentExecutionController::class, 'callback'])
+            ->withoutMiddleware(['jwt.auth', 'tenant.status']); // Webhooks don't require JWT
+
 
         // =====================================================================
         // BILLING

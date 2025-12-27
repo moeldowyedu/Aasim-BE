@@ -15,6 +15,7 @@ return new class extends Migration {
      */
     public function up(): void
     {
+        // Create table without foreign key first
         Schema::create('agent_categories', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('name')->comment('Display name of the category');
@@ -23,17 +24,18 @@ return new class extends Migration {
             $table->boolean('is_active')->default(true)->comment('Whether this category is visible');
             $table->timestamps();
 
-            // Foreign key for recursive relationship
-            $table->foreign('parent_id')
-                ->references('id')
-                ->on('agent_categories')
-                ->onDelete('cascade')
-                ->comment('Deleting a parent category will cascade to all subcategories');
-
             // Indexes for performance
             $table->index('parent_id');
             $table->index('is_active');
             $table->index(['parent_id', 'is_active']);
+        });
+
+        // Add self-referencing foreign key after table is created
+        Schema::table('agent_categories', function (Blueprint $table) {
+            $table->foreign('parent_id')
+                ->references('id')
+                ->on('agent_categories')
+                ->onDelete('cascade');
         });
     }
 

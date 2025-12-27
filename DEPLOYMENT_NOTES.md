@@ -71,10 +71,10 @@ php artisan migrate:status
 # Run migrations in this order:
 # 1. 2025_12_27_000002_create_agent_categories_table.php
 # 2. 2025_12_27_000003_create_agent_category_map_table.php
-# 3. 2025_12_27_000000_migrate_agent_categories_data.php (data migration)
-# 4. 2025_12_27_000001_modify_agents_table_for_async_execution.php
-# 5. 2025_12_27_000004_create_agent_endpoints_table.php
-# 6. 2025_12_27_000005_create_agent_runs_table.php
+# 3. 2025_12_27_120000_migrate_agent_categories_data.php (data migration)
+# 4. 2025_12_27_130000_modify_agents_table_for_async_execution.php
+# 5. 2025_12_27_140000_create_agent_endpoints_table.php
+# 6. 2025_12_27_150000_create_agent_runs_table.php
 
 # Run all migrations
 php artisan migrate --force

@@ -121,7 +121,11 @@ class AdminAgentEndpointsController extends Controller
             'agent_id' => 'required|uuid|exists:agents,id',
             'type' => 'required|in:trigger,callback',
             'url' => 'required|url|max:500',
+            'method' => 'sometimes|string|in:GET,POST,PUT,PATCH,DELETE|max:10',
+            'headers' => 'sometimes|array',
             'secret' => 'sometimes|string|min:16|max:255',
+            'timeout_ms' => 'sometimes|integer|min:1000|max:300000',
+            'retries' => 'sometimes|integer|min:0|max:10',
             'is_active' => 'sometimes|boolean',
         ]);
 
@@ -142,7 +146,11 @@ class AdminAgentEndpointsController extends Controller
                 'agent_id' => $request->agent_id,
                 'type' => $request->type,
                 'url' => $request->url,
+                'method' => $request->method ?? 'POST',
+                'headers' => $request->headers ?? [],
                 'secret' => $request->secret ?? Str::random(32),
+                'timeout_ms' => $request->timeout_ms ?? 10000,
+                'retries' => $request->retries ?? 3,
                 'is_active' => $request->is_active ?? true,
             ]);
 
@@ -243,12 +251,16 @@ class AdminAgentEndpointsController extends Controller
 
         $request->validate([
             'url' => 'sometimes|url|max:500',
+            'method' => 'sometimes|string|in:GET,POST,PUT,PATCH,DELETE|max:10',
+            'headers' => 'sometimes|array',
             'secret' => 'sometimes|string|min:16|max:255',
+            'timeout_ms' => 'sometimes|integer|min:1000|max:300000',
+            'retries' => 'sometimes|integer|min:0|max:10',
             'is_active' => 'sometimes|boolean',
         ]);
 
         try {
-            $endpoint->update($request->only(['url', 'secret', 'is_active']));
+            $endpoint->update($request->only(['url', 'method', 'headers', 'secret', 'timeout_ms', 'retries', 'is_active']));
 
             return response()->json([
                 'success' => true,

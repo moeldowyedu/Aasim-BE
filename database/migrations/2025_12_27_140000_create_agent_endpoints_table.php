@@ -16,7 +16,8 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create('agent_endpoints', function (Blueprint $table) {
+        if (!Schema::hasTable('agent_endpoints')) {
+            Schema::create('agent_endpoints', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('agent_id')->comment('Reference to the agent');
             $table->string('type')->comment('Endpoint type: trigger | callback');
@@ -40,7 +41,8 @@ return new class extends Migration {
 
             // Ensure each agent has only ONE trigger and ONE callback endpoint
             $table->unique(['agent_id', 'type'], 'unique_agent_endpoint_type');
-        });
+            });
+        }
     }
 
     /**

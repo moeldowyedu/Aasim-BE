@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Agent extends Model
@@ -21,7 +22,6 @@ class Agent extends Model
     protected $fillable = [
         'name',
         'slug',
-        'category',
         'description',
         'long_description',
         'icon_url',
@@ -32,14 +32,12 @@ class Agent extends Model
         'base_price',
         'monthly_price',
         'annual_price',
-        'is_marketplace',
         'is_active',
         'is_featured',
         'version',
-        'total_installs',
-        'rating',
-        'review_count',
         'created_by_user_id',
+        'runtime_type',
+        'execution_timeout_ms',
     ];
 
     /**
@@ -50,13 +48,12 @@ class Agent extends Model
     protected $casts = [
         'capabilities' => 'array',
         'supported_languages' => 'array',
-        'is_marketplace' => 'boolean',
         'is_active' => 'boolean',
         'is_featured' => 'boolean',
         'base_price' => 'decimal:2',
         'monthly_price' => 'decimal:2',
         'annual_price' => 'decimal:2',
-        'rating' => 'decimal:2',
+        'execution_timeout_ms' => 'integer',
     ];
 
     /**
@@ -87,19 +84,51 @@ class Agent extends Model
     }
 
     /**
+     * Get the categories this agent belongs to.
+     */
+    public function categories(): BelongsToMany
+    {
+        return $this->belongsToMany(AgentCategory::class, 'agent_category_map', 'agent_id', 'category_id');
+    }
+
+    /**
+     * Get the endpoints for this agent.
+     */
+    public function endpoints(): HasMany
+    {
+        return $this->hasMany(AgentEndpoint::class);
+    }
+
+    /**
+     * Get the trigger endpoint for this agent.
+     */
+    public function triggerEndpoint(): HasMany
+    {
+        return $this->hasMany(AgentEndpoint::class)->where('type', 'trigger');
+    }
+
+    /**
+     * Get the callback endpoint for this agent.
+     */
+    public function callbackEndpoint(): HasMany
+    {
+        return $this->hasMany(AgentEndpoint::class)->where('type', 'callback');
+    }
+
+    /**
+     * Get the runs for this agent.
+     */
+    public function runs(): HasMany
+    {
+        return $this->hasMany(AgentRun::class);
+    }
+
+    /**
      * Check if agent is free.
      */
     public function isFree(): bool
     {
         return $this->price_model === 'free';
-    }
-
-    /**
-     * Check if agent is marketplace agent.
-     */
-    public function isMarketplace(): bool
-    {
-        return $this->is_marketplace;
     }
 
     /**
@@ -111,27 +140,19 @@ class Agent extends Model
     }
 
     /**
-     * Increment total installs.
+     * Check if agent is n8n runtime type.
      */
-    public function incrementInstalls(): void
+    public function isN8nRuntime(): bool
     {
-        $this->increment('total_installs');
+        return $this->runtime_type === 'n8n';
     }
 
     /**
-     * Update rating.
+     * Check if agent is custom runtime type.
      */
-    public function updateRating(float $newRating): void
+    public function isCustomRuntime(): bool
     {
-        $totalRatings = $this->review_count;
-        $currentTotal = $this->rating * $totalRatings;
-        $newTotal = $currentTotal + $newRating;
-        $newCount = $totalRatings + 1;
-
-        $this->update([
-            'rating' => round($newTotal / $newCount, 2),
-            'review_count' => $newCount,
-        ]);
+        return $this->runtime_type === 'custom';
     }
 
     /**
@@ -143,14 +164,6 @@ class Agent extends Model
     }
 
     /**
-     * Scope: Marketplace agents only.
-     */
-    public function scopeMarketplace($query)
-    {
-        return $query->where('is_marketplace', true);
-    }
-
-    /**
      * Scope: Featured agents.
      */
     public function scopeFeatured($query)
@@ -159,10 +172,10 @@ class Agent extends Model
     }
 
     /**
-     * Scope: By category.
+     * Scope: By runtime type.
      */
-    public function scopeByCategory($query, string $category)
+    public function scopeByRuntimeType($query, string $runtimeType)
     {
-        return $query->where('category', $category);
+        return $query->where('runtime_type', $runtimeType);
     }
 }

@@ -58,8 +58,12 @@ Public endpoints (auth, marketplace) do not require authentication.
  *     )
  * )
  * @OA\Server(
- *     url="/api/v1",
- *     description="OBSOLIO API v1"
+ *     url="https://api.obsolio.com",
+ *     description="Production Server"
+ * )
+ * @OA\Server(
+ *     url="http://localhost/api/v1",
+ *     description="Local Development"
  * )
  * @OA\SecurityScheme(
  *     securityScheme="bearerAuth",

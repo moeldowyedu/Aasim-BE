@@ -304,7 +304,7 @@ class AdminController extends Controller
      * Get specific agent details.
      *
      * @OA\Get(
-     *     path="/v1/admin/agents/{id}",
+     *     path="/api/v1/admin/agents/{id}",
      *     summary="Get agent details",
      *     description="Get detailed information about a specific agent (admin view)",
      *     operationId="adminGetAgent",

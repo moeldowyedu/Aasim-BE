@@ -31,7 +31,7 @@ class RoleController extends Controller
      */
     /**
      * @OA\Get(
-     *     path="/roles",
+     *     path="/api/v1/roles",
      *     summary="List roles",
      *     operationId="getRoles",
      *     tags={"Roles"},
@@ -84,7 +84,7 @@ class RoleController extends Controller
      */
     /**
      * @OA\Post(
-     *     path="/roles",
+     *     path="/api/v1/roles",
      *     summary="Create role",
      *     operationId="createRole",
      *     tags={"Roles"},
@@ -140,7 +140,7 @@ class RoleController extends Controller
      */
     /**
      * @OA\Get(
-     *     path="/roles/{id}",
+     *     path="/api/v1/roles/{id}",
      *     summary="Get role details",
      *     operationId="getRole",
      *     tags={"Roles"},
@@ -183,7 +183,7 @@ class RoleController extends Controller
      */
     /**
      * @OA\Put(
-     *     path="/roles/{id}",
+     *     path="/api/v1/roles/{id}",
      *     summary="Update role",
      *     operationId="updateRole",
      *     tags={"Roles"},
@@ -258,7 +258,7 @@ class RoleController extends Controller
      */
     /**
      * @OA\Delete(
-     *     path="/roles/{id}",
+     *     path="/api/v1/roles/{id}",
      *     summary="Delete role",
      *     operationId="deleteRole",
      *     tags={"Roles"},

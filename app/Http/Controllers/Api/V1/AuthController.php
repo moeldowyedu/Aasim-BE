@@ -21,7 +21,7 @@ class AuthController extends Controller
 {
     /**
      * @OA\Post(
-     *     path="/auth/register",
+     *     path="/api/v1/auth/register",
      *     summary="Register new user with tenant",
      *     operationId="register",
      *     tags={"Authentication"},
@@ -228,7 +228,7 @@ class AuthController extends Controller
 
     /**
      * @OA\Post(
-     *     path="/auth/check-subdomain",
+     *     path="/api/v1/auth/check-subdomain",
      *     summary="Check if a subdomain is available",
      *     operationId="checkSubdomain",
      *     tags={"Authentication"},
@@ -285,7 +285,7 @@ class AuthController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/tenants/check-availability/{subdomain}",
+     *     path="/api/v1/tenants/check-availability/{subdomain}",
      *     summary="Check if a subdomain is available (GET)",
      *     operationId="checkAvailability",
      *     tags={"Authentication"},
@@ -389,7 +389,7 @@ class AuthController extends Controller
 
     /**
      * @OA\Post(
-     *     path="/auth/lookup-tenant",
+     *     path="/api/v1/auth/lookup-tenant",
      *     summary="Lookup tenants for a user",
      *     operationId="lookupTenant",
      *     tags={"Authentication"},
@@ -477,7 +477,7 @@ class AuthController extends Controller
 
     /**
      * @OA\Post(
-     *     path="/auth/login",
+     *     path="/api/v1/auth/login",
      *     summary="Login user",
      *     operationId="login",
      *     tags={"Authentication"},
@@ -650,7 +650,7 @@ class AuthController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/auth/me",
+     *     path="/api/v1/auth/me",
      *     summary="Get current user",
      *     operationId="me",
      *     tags={"Authentication"},
@@ -717,7 +717,7 @@ class AuthController extends Controller
 
     /**
      * @OA\Post(
-     *     path="/auth/logout",
+     *     path="/api/v1/auth/logout",
      *     summary="Logout user",
      *     operationId="logout",
      *     tags={"Authentication"},
@@ -770,7 +770,7 @@ class AuthController extends Controller
 
     /**
      * @OA\Post(
-     *     path="/auth/refresh",
+     *     path="/api/v1/auth/refresh",
      *     summary="Refresh token",
      *     operationId="refresh",
      *     tags={"Authentication"},
@@ -816,7 +816,7 @@ class AuthController extends Controller
 
     /**
      * @OA\Put(
-     *     path="/auth/profile",
+     *     path="/api/v1/auth/profile",
      *     summary="Update user profile",
      *     operationId="updateProfile",
      *     tags={"Authentication"},
@@ -878,7 +878,7 @@ class AuthController extends Controller
 
     /**
      * @OA\Post(
-     *     path="/auth/change-password",
+     *     path="/api/v1/auth/change-password",
      *     summary="Change user password",
      *     operationId="changePassword",
      *     tags={"Authentication"},
@@ -1066,7 +1066,7 @@ class AuthController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/auth/email/verify/{id}/{hash}",
+     *     path="/api/v1/auth/email/verify/{id}/{hash}",
      *     summary="Verify email address",
      *     operationId="verifyEmail",
      *     tags={"Authentication"},
@@ -1171,7 +1171,7 @@ class AuthController extends Controller
 
     /**
      * @OA\Post(
-     *     path="/auth/email/resend",
+     *     path="/api/v1/auth/email/resend",
      *     summary="Resend verification email",
      *     operationId="resendVerification",
      *     tags={"Authentication"},

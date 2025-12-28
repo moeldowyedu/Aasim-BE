@@ -14,7 +14,7 @@ class UserActivityController extends Controller
 {
     /**
      * @OA\Get(
-     *     path="/activities",
+     *     path="/api/v1/activities",
      *     summary="List all activities",
      *     description="Get a paginated list of user activities",
      *     operationId="getActivities",
@@ -107,7 +107,7 @@ class UserActivityController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/activities/{id}",
+     *     path="/api/v1/activities/{id}",
      *     summary="Get activity details",
      *     operationId="getActivity",
      *     tags={"Activities"},
@@ -153,7 +153,7 @@ class UserActivityController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/activities/user/{userId}",
+     *     path="/api/v1/activities/user/{userId}",
      *     summary="Get user activities",
      *     operationId="getUserActivities",
      *     tags={"Activities"},
@@ -216,7 +216,7 @@ class UserActivityController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/activities/export",
+     *     path="/api/v1/activities/export",
      *     summary="Export activities",
      *     operationId="exportActivities",
      *     tags={"Activities"},
@@ -312,7 +312,7 @@ class UserActivityController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/sessions",
+     *     path="/api/v1/sessions",
      *     summary="List active sessions",
      *     operationId="getSessions",
      *     tags={"Sessions"},
@@ -375,7 +375,7 @@ class UserActivityController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/sessions/active",
+     *     path="/api/v1/sessions/active",
      *     summary="Get active sessions",
      *     operationId="getActiveSessions",
      *     tags={"Sessions"},
@@ -424,7 +424,7 @@ class UserActivityController extends Controller
 
     /**
      * @OA\Post(
-     *     path="/sessions/{id}/terminate",
+     *     path="/api/v1/sessions/{id}/terminate",
      *     summary="Terminate session",
      *     operationId="terminateSession",
      *     tags={"Sessions"},

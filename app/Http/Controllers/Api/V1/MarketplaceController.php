@@ -62,7 +62,7 @@ class MarketplaceController extends Controller
      * Get specific agent details from marketplace.
      *
      * @OA\Get(
-     *     path="/v1/marketplace/agents/{id}",
+     *     path="/api/v1/marketplace/agents/{id}",
      *     summary="Get marketplace agent details",
      *     description="Get detailed information about a specific agent in the marketplace",
      *     operationId="getMarketplaceAgent",

@@ -16,7 +16,7 @@ class DashboardController extends Controller
      */
     /**
      * @OA\Get(
-     *     path="/dashboard/stats",
+     *     path="/api/v1/dashboard/stats",
      *     summary="Get dashboard statistics",
      *     operationId="getDashboardStats",
      *     tags={"Dashboard"},

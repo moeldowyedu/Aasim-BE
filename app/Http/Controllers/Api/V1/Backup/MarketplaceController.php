@@ -102,7 +102,7 @@ class MarketplaceController extends Controller
      */
     /**
      * @OA\Get(
-     *     path="/marketplace/{marketplaceListing}",
+     *     path="/api/v1/marketplace/{marketplaceListing}",
      *     summary="Get marketplace item",
      *     operationId="getMarketplaceListing",
      *     tags={"Marketplace"},
@@ -138,7 +138,7 @@ class MarketplaceController extends Controller
      */
     /**
      * @OA\Post(
-     *     path="/marketplace/{id}/purchase",
+     *     path="/api/v1/marketplace/{id}/purchase",
      *     summary="Purchase agent",
      *     operationId="purchaseAgent",
      *     tags={"Marketplace"},

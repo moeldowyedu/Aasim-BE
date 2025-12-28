@@ -18,8 +18,11 @@ class ImpersonationLog extends Model
     protected $fillable = [
         'admin_user_id',
         'target_user_id',
+        'tenant_id',
+        'token_hash',
         'started_at',
         'ended_at',
+        'expires_at',
         'ip_address',
         'reason',
         'metadata',
@@ -34,6 +37,16 @@ class ImpersonationLog extends Model
         'metadata' => 'array',
         'started_at' => 'datetime',
         'ended_at' => 'datetime',
+        'expires_at' => 'datetime',
+    ];
+
+    /**
+     * The attributes that should be hidden.
+     *
+     * @var array<int, string>
+     */
+    protected $hidden = [
+        'token_hash',
     ];
 
     /**
@@ -53,11 +66,27 @@ class ImpersonationLog extends Model
     }
 
     /**
+     * Get the tenant being impersonated.
+     */
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class, 'tenant_id');
+    }
+
+    /**
      * Check if impersonation is active.
      */
     public function isActive(): bool
     {
-        return $this->started_at && !$this->ended_at;
+        return $this->started_at && !$this->ended_at && !$this->isExpired();
+    }
+
+    /**
+     * Check if impersonation token has expired.
+     */
+    public function isExpired(): bool
+    {
+        return $this->expires_at && $this->expires_at->isPast();
     }
 
     /**
@@ -108,21 +137,88 @@ class ImpersonationLog extends Model
     }
 
     /**
+     * Scope: Not expired.
+     */
+    public function scopeNotExpired($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereNull('expires_at')
+              ->orWhere('expires_at', '>', now());
+        });
+    }
+
+    /**
+     * Scope: By tenant.
+     */
+    public function scopeByTenant($query, string $tenantId)
+    {
+        return $query->where('tenant_id', $tenantId);
+    }
+
+    /**
+     * Generate impersonation token.
+     */
+    public static function generateToken(): string
+    {
+        return bin2hex(random_bytes(32));
+    }
+
+    /**
+     * Hash the token for storage.
+     */
+    public static function hashToken(string $token): string
+    {
+        return hash('sha256', $token);
+    }
+
+    /**
+     * Verify token against hash.
+     */
+    public function verifyToken(string $token): bool
+    {
+        return hash_equals($this->token_hash, self::hashToken($token));
+    }
+
+    /**
      * Log a new impersonation session.
      */
     public static function startImpersonation(
-        int $adminUserId,
-        int $targetUserId,
+        string $adminUserId,
+        string $tenantId,
         ?string $reason = null,
-        ?array $metadata = null
-    ): self {
-        return self::create([
+        ?array $metadata = null,
+        int $ttlMinutes = 30
+    ): array {
+        $token = self::generateToken();
+        $tokenHash = self::hashToken($token);
+
+        $log = self::create([
             'admin_user_id' => $adminUserId,
-            'target_user_id' => $targetUserId,
+            'tenant_id' => $tenantId,
+            'token_hash' => $tokenHash,
             'started_at' => now(),
+            'expires_at' => now()->addMinutes($ttlMinutes),
             'ip_address' => request()->ip(),
             'reason' => $reason,
             'metadata' => $metadata,
         ]);
+
+        return [
+            'log' => $log,
+            'token' => $token,
+        ];
+    }
+
+    /**
+     * Find active impersonation by token.
+     */
+    public static function findByToken(string $token): ?self
+    {
+        $tokenHash = self::hashToken($token);
+
+        return self::where('token_hash', $tokenHash)
+            ->active()
+            ->notExpired()
+            ->first();
     }
 }

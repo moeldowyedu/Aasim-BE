@@ -18,7 +18,7 @@ class AgentExecutionController extends Controller
      * Get list of agent runs for the current tenant.
      *
      * @OA\Get(
-     *     path="/v1/tenant/agent-runs",
+     *     path="/api/v1/tenant/agent-runs",
      *     summary="Get list of agent execution runs",
      *     description="Get paginated list of agent execution history for the current tenant with optional filters",
      *     operationId="getTenantAgentRuns",
@@ -63,7 +63,7 @@ class AgentExecutionController extends Controller
      * Execute an agent asynchronously.
      *
      * @OA\Post(
-     *     path="/v1/tenant/agents/{id}/run",
+     *     path="/api/v1/tenant/agents/{id}/run",
      *     summary="Execute an agent asynchronously",
      *     description="Initiates asynchronous execution of an agent. The agent will process the request in the background and send results to the callback webhook.",
      *     operationId="executeAgent",
@@ -273,7 +273,7 @@ class AgentExecutionController extends Controller
      * Get agent run status.
      *
      * @OA\Get(
-     *     path="/v1/tenant/agent-runs/{run_id}",
+     *     path="/api/v1/tenant/agent-runs/{run_id}",
      *     summary="Get agent execution status",
      *     description="Retrieve the status and results of an agent execution run",
      *     operationId="getAgentRunStatus",
@@ -385,7 +385,7 @@ class AgentExecutionController extends Controller
      * Webhook callback for agent execution results.
      *
      * @OA\Post(
-     *     path="/v1/webhooks/agents/callback",
+     *     path="/api/v1/webhooks/agents/callback",
      *     summary="Agent execution callback webhook",
      *     description="Webhook endpoint for agents to send execution results. This endpoint does not require JWT authentication but validates a secret token instead.",
      *     operationId="agentExecutionCallback",

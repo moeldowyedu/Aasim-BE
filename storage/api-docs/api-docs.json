@@ -20,6 +20,57 @@
         }
     ],
     "paths": {
+        "/v1/admin/agents/{id}": {
+            "get": {
+                "tags": [
+                    "Admin - Agents"
+                ],
+                "summary": "Get agent details",
+                "description": "Get detailed information about a specific agent (admin view)",
+                "operationId": "adminGetAgent",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Agent ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Agent details retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Agent not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/admin/agents/bulk-activate": {
             "post": {
                 "tags": [
@@ -1336,6 +1387,129 @@
                                 },
                                 "type": "object"
                             }
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Agent runs retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/v1/admin/agent-runs/{id}": {
+            "get": {
+                "tags": [
+                    "Admin - Agent Runs"
+                ],
+                "summary": "Get specific agent run details",
+                "description": "Get detailed information about a specific agent execution run",
+                "operationId": "adminGetAgentRun",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Agent Run ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Agent run details retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Agent run not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/v1/tenant/agent-runs": {
+            "get": {
+                "tags": [
+                    "Tenant - Agent Runs"
+                ],
+                "summary": "Get list of agent execution runs",
+                "description": "Get paginated list of agent execution history for the current tenant with optional filters",
+                "operationId": "getTenantAgentRuns",
+                "parameters": [
+                    {
+                        "name": "agent_id",
+                        "in": "query",
+                        "description": "Filter by agent ID",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filter by status",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pending",
+                                "running",
+                                "completed",
+                                "failed"
+                            ]
                         }
                     },
                     {
@@ -4939,6 +5113,10 @@
         {
             "name": "Authentication",
             "description": "Public authentication endpoints"
+        },
+        {
+            "name": "Marketplace",
+            "description": "Public marketplace endpoints for browsing agents"
         },
         {
             "name": "Admin - Agents",

@@ -22,7 +22,7 @@ class TenantController extends Controller
      */
     /**
      * @OA\Get(
-     *     path="/tenants",
+     *     path="/api/v1/tenants",
      *     summary="Get all user's tenants",
      *     operationId="getTenants",
      *     tags={"Tenant"},
@@ -119,7 +119,7 @@ class TenantController extends Controller
      */
     /**
      * @OA\Post(
-     *     path="/tenants",
+     *     path="/api/v1/tenants",
      *     summary="Create a new tenant",
      *     operationId="createTenant",
      *     tags={"Tenant"},
@@ -235,7 +235,7 @@ class TenantController extends Controller
      */
     /**
      * @OA\Post(
-     *     path="/tenants/{id}/switch",
+     *     path="/api/v1/tenants/{id}/switch",
      *     summary="Switch active tenant",
      *     operationId="switchTenant",
      *     tags={"Tenant"},
@@ -325,7 +325,7 @@ class TenantController extends Controller
      */
     /**
      * @OA\Get(
-     *     path="/tenant",
+     *     path="/api/v1/tenant",
      *     summary="Get current tenant",
      *     operationId="getTenant",
      *     tags={"Tenant"},
@@ -384,7 +384,7 @@ class TenantController extends Controller
      */
     /**
      * @OA\Put(
-     *     path="/tenant",
+     *     path="/api/v1/tenant",
      *     summary="Update current tenant",
      *     operationId="updateTenant",
      *     tags={"Tenant"},

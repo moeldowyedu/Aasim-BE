@@ -15,7 +15,7 @@ class PermissionController extends Controller
      */
     /**
      * @OA\Get(
-     *     path="/permissions",
+     *     path="/api/v1/permissions",
      *     summary="List permissions (grouped)",
      *     description="Get all permissions grouped by category",
      *     operationId="getPermissions",
@@ -82,7 +82,7 @@ class PermissionController extends Controller
      */
     /**
      * @OA\Get(
-     *     path="/permissions/list",
+     *     path="/api/v1/permissions/list",
      *     summary="List permissions (flat)",
      *     description="Get a flat list of all permissions",
      *     operationId="listPermissions",
@@ -133,7 +133,7 @@ class PermissionController extends Controller
      */
     /**
      * @OA\Get(
-     *     path="/permissions/{id}",
+     *     path="/api/v1/permissions/{id}",
      *     summary="Get permission details",
      *     operationId="getPermission",
      *     tags={"Permissions"},

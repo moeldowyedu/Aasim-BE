@@ -130,7 +130,7 @@ class AdminAgentRunsController extends Controller
      * Get specific agent run details.
      *
      * @OA\Get(
-     *     path="/v1/admin/agent-runs/{id}",
+     *     path="/api/v1/admin/agent-runs/{id}",
      *     summary="Get specific agent run details",
      *     description="Get detailed information about a specific agent execution run",
      *     operationId="adminGetAgentRun",

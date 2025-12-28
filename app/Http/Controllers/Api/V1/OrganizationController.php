@@ -19,7 +19,7 @@ class OrganizationController extends Controller
      * Display a listing of organizations.
      *
      * @OA\Get(
-     *     path="/organizations",
+     *     path="/api/v1/organizations",
      *     summary="List organizations",
      *     operationId="getOrganizations",
      *     tags={"Organizations"},
@@ -72,7 +72,7 @@ class OrganizationController extends Controller
      */
     /**
      * @OA\Post(
-     *     path="/organizations",
+     *     path="/api/v1/organizations",
      *     summary="Create organization",
      *     operationId="createOrganization",
      *     tags={"Organizations"},
@@ -140,7 +140,7 @@ class OrganizationController extends Controller
      */
     /**
      * @OA\Get(
-     *     path="/organizations/{organization}",
+     *     path="/api/v1/organizations/{organization}",
      *     summary="Get organization details",
      *     operationId="getOrganization",
      *     tags={"Organizations"},
@@ -192,7 +192,7 @@ class OrganizationController extends Controller
      */
     /**
      * @OA\Put(
-     *     path="/organizations/{organization}",
+     *     path="/api/v1/organizations/{organization}",
      *     summary="Update organization",
      *     operationId="updateOrganization",
      *     tags={"Organizations"},
@@ -271,7 +271,7 @@ class OrganizationController extends Controller
      */
     /**
      * @OA\Delete(
-     *     path="/organizations/{organization}",
+     *     path="/api/v1/organizations/{organization}",
      *     summary="Delete organization",
      *     operationId="deleteOrganization",
      *     tags={"Organizations"},
@@ -309,7 +309,7 @@ class OrganizationController extends Controller
      */
     /**
      * @OA\Post(
-     *     path="/organizations/{organization}/switch",
+     *     path="/api/v1/organizations/{organization}/switch",
      *     summary="Switch organization context",
      *     operationId="switchOrganization",
      *     tags={"Organizations"},

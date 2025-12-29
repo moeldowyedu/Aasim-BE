@@ -15,6 +15,84 @@ use Illuminate\Validation\Rule;
 class TenantManagementController extends Controller
 {
     /**
+     * @OA\Get(
+     *     path="/api/v1/admin/tenants",
+     *     summary="List all tenants with filtering and pagination",
+     *     description="Get a paginated list of all tenants with advanced filtering options",
+     *     tags={"Admin - Tenants"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="search",
+     *         in="query",
+     *         description="Search by name, email, or subdomain",
+     *         required=false,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Parameter(
+     *         name="status",
+     *         in="query",
+     *         description="Filter by status",
+     *         required=false,
+     *         @OA\Schema(type="string", enum={"active", "inactive", "pending_verification", "suspended"})
+     *     ),
+     *     @OA\Parameter(
+     *         name="type",
+     *         in="query",
+     *         description="Filter by type",
+     *         required=false,
+     *         @OA\Schema(type="string", enum={"organization", "personal"})
+     *     ),
+     *     @OA\Parameter(
+     *         name="plan_id",
+     *         in="query",
+     *         description="Filter by subscription plan ID",
+     *         required=false,
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\Parameter(
+     *         name="has_subscription",
+     *         in="query",
+     *         description="Filter by subscription status",
+     *         required=false,
+     *         @OA\Schema(type="string", enum={"true", "false"})
+     *     ),
+     *     @OA\Parameter(
+     *         name="sort_by",
+     *         in="query",
+     *         description="Sort by field",
+     *         required=false,
+     *         @OA\Schema(type="string", enum={"created_at", "name", "email", "type", "status"}, default="created_at")
+     *     ),
+     *     @OA\Parameter(
+     *         name="sort_order",
+     *         in="query",
+     *         description="Sort order",
+     *         required=false,
+     *         @OA\Schema(type="string", enum={"asc", "desc"}, default="desc")
+     *     ),
+     *     @OA\Parameter(
+     *         name="per_page",
+     *         in="query",
+     *         description="Items per page",
+     *         required=false,
+     *         @OA\Schema(type="integer", default=20, minimum=1, maximum=100)
+     *     ),
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         description="Page number",
+     *         required=false,
+     *         @OA\Schema(type="integer", default=1, minimum=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Tenants retrieved successfully",
+     *         @OA\JsonContent(ref="#/components/schemas/PaginatedResponse")
+     *     ),
+     *     @OA\Response(response=401, ref="#/components/responses/Unauthorized"),
+     *     @OA\Response(response=403, ref="#/components/responses/Forbidden")
+     * )
+     *
      * List all tenants with advanced filtering and pagination.
      */
     public function index(Request $request): JsonResponse
@@ -307,6 +385,42 @@ class TenantManagementController extends Controller
     }
 
     /**
+     * @OA\Get(
+     *     path="/api/v1/admin/tenants/statistics",
+     *     summary="Get tenant statistics and metrics",
+     *     description="Retrieve comprehensive tenant statistics including counts by status, type, and plan",
+     *     tags={"Admin - Tenants"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Statistics retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="total_tenants", type="integer", example=1234),
+     *                 @OA\Property(
+     *                     property="by_type",
+     *                     type="object",
+     *                     @OA\Property(property="personal", type="integer", example=456),
+     *                     @OA\Property(property="organization", type="integer", example=778)
+     *                 ),
+     *                 @OA\Property(
+     *                     property="by_status",
+     *                     type="array",
+     *                     @OA\Items(
+     *                         @OA\Property(property="status", type="string", example="active"),
+     *                         @OA\Property(property="count", type="integer", example=1156)
+     *                     )
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=401, ref="#/components/responses/Unauthorized"),
+     *     @OA\Response(response=403, ref="#/components/responses/Forbidden")
+     * )
+     *
      * Get tenant statistics and analytics.
      */
     public function statistics(): JsonResponse

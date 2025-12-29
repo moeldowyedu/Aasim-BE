@@ -224,6 +224,30 @@ Route::prefix('v1/admin')->middleware(['jwt.auth', 'system_admin'])->group(funct
     // =========================================================================
     Route::get('/activity-logs', [AdminController::class, 'activityLogs']);
     Route::get('/impersonation-logs', [AdminController::class, 'impersonationLogs']);
+
+    // =========================================================================
+    // IMPERSONATION (Support Access)
+    // =========================================================================
+    Route::prefix('impersonations')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\V1\Admin\AdminImpersonationController::class, 'index']);
+        Route::get('/{id}', [\App\Http\Controllers\Api\V1\Admin\AdminImpersonationController::class, 'show']);
+        Route::post('/{id}/end', [\App\Http\Controllers\Api\V1\Admin\AdminImpersonationController::class, 'end']);
+    });
+
+    Route::prefix('tenants/{tenantId}/impersonations')->group(function () {
+        Route::post('/start', [\App\Http\Controllers\Api\V1\Admin\AdminImpersonationController::class, 'start']);
+    });
+
+    // =========================================================================
+    // CONSOLE PERMISSIONS & ROLES
+    // =========================================================================
+    Route::prefix('permissions')->group(function () {
+        Route::get('/', [AdminController::class, 'listPermissions']);
+    });
+
+    Route::prefix('roles')->group(function () {
+        Route::get('/', [AdminController::class, 'listRoles']);
+    });
 });
 
 // =============================================================================
@@ -342,6 +366,21 @@ Route::middleware([
         Route::get('/', [UserActivityController::class, 'sessions']);
         Route::get('/active', [UserActivityController::class, 'activeSessions']);
         Route::post('/{id}/terminate', [UserActivityController::class, 'terminateSession']);
+    });
+
+    // =========================================================================
+    // ROLES & PERMISSIONS (Tenant-Scoped)
+    // =========================================================================
+    Route::prefix('roles')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\V1\Tenant\TenantRoleController::class, 'index']);
+        Route::post('/', [\App\Http\Controllers\Api\V1\Tenant\TenantRoleController::class, 'store']);
+        Route::get('/{id}', [\App\Http\Controllers\Api\V1\Tenant\TenantRoleController::class, 'show']);
+        Route::put('/{id}', [\App\Http\Controllers\Api\V1\Tenant\TenantRoleController::class, 'update']);
+        Route::delete('/{id}', [\App\Http\Controllers\Api\V1\Tenant\TenantRoleController::class, 'destroy']);
+    });
+
+    Route::prefix('permissions')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\V1\Tenant\TenantRoleController::class, 'listPermissions']);
     });
 });
 

@@ -882,4 +882,94 @@ class AdminController extends Controller
             'data' => $logs,
         ]);
     }
+
+    // =========================================================================
+    // CONSOLE PERMISSIONS & ROLES
+    // =========================================================================
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/admin/permissions",
+     *     tags={"Admin - Permissions & Roles"},
+     *     summary="List all console permissions",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="List of console permissions"
+     *     )
+     * )
+     */
+    public function listPermissions(Request $request): JsonResponse
+    {
+        try {
+            // Get all console-scoped permissions
+            $permissions = \Spatie\Permission\Models\Permission::where('guard_name', 'console')
+                ->orderBy('name')
+                ->get(['id', 'name']);
+
+            // Group permissions by prefix
+            $grouped = $permissions->groupBy(function ($permission) {
+                $parts = explode('.', $permission->name);
+                return $parts[0] ?? 'other';
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'all' => $permissions,
+                    'grouped' => $grouped,
+                    'total' => $permissions->count(),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve permissions',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/admin/roles",
+     *     tags={"Admin - Permissions & Roles"},
+     *     summary="List all console roles",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="List of console roles"
+     *     )
+     * )
+     */
+    public function listRoles(Request $request): JsonResponse
+    {
+        try {
+            // Get all console-scoped roles
+            $roles = \Spatie\Permission\Models\Role::where('guard_name', 'console')
+                ->whereNull('tenant_id')
+                ->with(['permissions:id,name'])
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $roles->map(function ($role) {
+                    return [
+                        'id' => $role->id,
+                        'name' => $role->name,
+                        'guard_name' => $role->guard_name,
+                        'permissions' => $role->permissions->pluck('name'),
+                        'permissions_count' => $role->permissions->count(),
+                        'created_at' => $role->created_at,
+                    ];
+                }),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve roles',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
 }

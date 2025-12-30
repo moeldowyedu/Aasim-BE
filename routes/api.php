@@ -101,6 +101,14 @@ Route::prefix('v1')->group(function () {
 });
 
 // =============================================================================
+// PUBLIC TENANT LOOKUP (No Auth/Tenancy Middleware)
+// =============================================================================
+Route::prefix('v1/tenants')->group(function () {
+    Route::get('/find-by-subdomain/{subdomain}', [TenantController::class, 'findBySubdomain']);
+    Route::get('/check-availability/{subdomain}', [AuthController::class, 'checkAvailability']);
+});
+
+// =============================================================================
 // ADMIN ENDPOINTS (System Console)
 // =============================================================================
 Route::prefix('v1/admin')->middleware(['jwt.auth', 'system_admin'])->group(function () {
@@ -441,7 +449,10 @@ Route::prefix('v1')->middleware([
 
     // Legacy tenant routes
     Route::get('/tenants', [TenantController::class, 'index'])->middleware('jwt.auth');
-    Route::get('/tenants/find-by-subdomain/{subdomain}', [TenantController::class, 'findBySubdomain']);
+    // Legacy tenant routes
+    Route::get('/tenants', [TenantController::class, 'index'])->middleware('jwt.auth');
+    // Route::get('/tenants/find-by-subdomain/{subdomain}', [TenantController::class, 'findBySubdomain']); // Moved to public group
+
     Route::post('/tenants/resend-verification/{subdomain}', [TenantController::class, 'resendVerification']);
 
     // Legacy auth routes (redirect to new structure)

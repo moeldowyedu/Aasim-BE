@@ -82,7 +82,7 @@ class AuthController extends Controller
 
         // 1. Validation
         $rules = [
-            'type' => 'required|in:personal,organization',
+            // 'type' is no longer required from user, we enforce 'organization'
             'fullName' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8',
@@ -104,13 +104,11 @@ class AuthController extends Controller
                     }
                 },
             ],
+            // Organization fields are now always required
+            'organizationFullName' => 'required|string|max:255',
+            'organizationShortName' => 'nullable|string|max:50',
+            'organizationLogo' => 'nullable',
         ];
-
-        if ($request->type === 'organization') {
-            $rules['organizationFullName'] = 'required|string|max:255';
-            $rules['organizationShortName'] = 'nullable|string|max:50';
-            $rules['organizationLogo'] = 'nullable';
-        }
 
         $request->validate($rules);
 
@@ -119,17 +117,13 @@ class AuthController extends Controller
                 // Generate TEMPORARY tenant ID
                 $tempTenantId = 'pending-' . Str::random(20);
 
-                // Step 1: Create Tenant (PENDING STATUS)
+                // Step 1: Create Tenant (PENDING STATUS) - Always Organization
                 $tenantData = [
                     'id' => $tempTenantId, // Temporary ID, will change after verification
                     'subdomain_preference' => $request->subdomain, // Save desired subdomain
-                    'name' => $request->type === 'personal'
-                        ? $request->fullName . "'s Workspace"
-                        : $request->organizationFullName,
-                    'short_name' => $request->type === 'personal'
-                        ? $request->subdomain
-                        : ($request->organizationShortName ?? $request->subdomain),
-                    'type' => $request->type,
+                    'name' => $request->organizationFullName,
+                    'short_name' => $request->organizationShortName ?? $request->subdomain,
+                    'type' => 'organization', // Hardcoded
                     'status' => 'pending_verification', // ⚠️ IMPORTANT
                 ];
 
@@ -138,24 +132,22 @@ class AuthController extends Controller
                 // ⚠️ IMPORTANT: DO NOT CREATE DOMAIN HERE
                 // Domain will be created AFTER email verification in verify() method
 
-                // Step 2: Create Organization (if applicable)
-                if ($request->type === 'organization') {
-                    $logoUrl = null;
-                    if ($request->hasFile('organizationLogo')) {
-                        $path = $request->file('organizationLogo')->store('organizations/logos', 'public');
-                        $logoUrl = '/storage/' . $path;
-                    } elseif (is_string($request->organizationLogo)) {
-                        $logoUrl = $request->organizationLogo;
-                    }
-
-                    $tenant->organizations()->create([
-                        'name' => $request->organizationFullName,
-                        'short_name' => $request->organizationShortName,
-                        'country' => $request->country,
-                        'phone' => $request->phone,
-                        'logo_url' => $logoUrl,
-                    ]);
+                // Step 2: Create Organization (Always)
+                $logoUrl = null;
+                if ($request->hasFile('organizationLogo')) {
+                    $path = $request->file('organizationLogo')->store('organizations/logos', 'public');
+                    $logoUrl = '/storage/' . $path;
+                } elseif (is_string($request->organizationLogo)) {
+                    $logoUrl = $request->organizationLogo;
                 }
+
+                $tenant->organizations()->create([
+                    'name' => $request->organizationFullName,
+                    'short_name' => $request->organizationShortName,
+                    'country' => $request->country,
+                    'phone' => $request->phone,
+                    'logo_url' => $logoUrl,
+                ]);
 
                 // Step 3: Create User (PENDING STATUS)
                 $user = User::create([

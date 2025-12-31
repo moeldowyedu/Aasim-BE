@@ -296,7 +296,7 @@ Route::middleware([
     Route::prefix('setup')->group(function () {
         Route::get('/status', [TenantSetupController::class, 'checkSetupStatus']);
         Route::post('/organization', [TenantSetupController::class, 'setupOrganization']);
-        Route::post('/personal', [TenantSetupController::class, 'setupPersonal']);
+        // Route::post('/personal', [TenantSetupController::class, 'setupPersonal']); // Removed
     });
 
     // =========================================================================
@@ -310,13 +310,13 @@ Route::middleware([
     // =========================================================================
     // ORGANIZATIONS
     // =========================================================================
-    Route::prefix('organizations')->group(function () {
-        Route::get('/', [OrganizationController::class, 'index']);
-        Route::post('/', [OrganizationController::class, 'store']);
-        Route::get('/{id}', [OrganizationController::class, 'show']);
-        Route::put('/{id}', [OrganizationController::class, 'update']);
-        Route::delete('/{id}', [OrganizationController::class, 'destroy']);
-        Route::get('/{id}/dashboard', [OrganizationController::class, 'dashboard']);
+    // =========================================================================
+    // ORGANIZATION (Single Entity per Tenant)
+    // =========================================================================
+    Route::prefix('organization')->group(function () {
+        Route::get('/', [OrganizationController::class, 'showCurrent']);
+        Route::post('/', [OrganizationController::class, 'storeCurrent']);
+        Route::put('/', [OrganizationController::class, 'updateCurrent']);
     });
 
     // =========================================================================

@@ -52,12 +52,12 @@ class Tenant extends BaseTenant implements TenantWithDatabase
     ];
 
     /**
-     * Get the organization this tenant belongs to.
-     * (For organization-type tenants only, personal tenants return null)
+     * Get the organization this tenant belongs to / owns.
+     * (Enforcing 1-to-1 relationship)
      */
     public function organization()
     {
-        return $this->belongsTo(Organization::class, 'organization_id');
+        return $this->hasOne(Organization::class);
     }
 
     /**

@@ -54,7 +54,10 @@ Route::prefix('v1')->group(function () {
 Route::prefix('v1/auth')->group(function () {
 
     // Registration & Login
-    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/register', function (Illuminate\Http\Request $request) {
+        \Log::info('Hit /register route closure', $request->all());
+        return app(AuthController::class)->register($request);
+    });
     Route::post('/login', [AuthController::class, 'login']);
 
     // Password Management

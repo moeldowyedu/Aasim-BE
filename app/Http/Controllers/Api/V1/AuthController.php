@@ -141,7 +141,7 @@ class AuthController extends Controller
                     $logoUrl = $request->organizationLogo;
                 }
 
-                $tenant->organizations()->create([
+                $tenant->organization()->create([
                     'name' => $request->organizationFullName,
                     'short_name' => $request->organizationShortName,
                     'country' => $request->country,

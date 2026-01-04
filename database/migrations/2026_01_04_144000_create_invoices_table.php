@@ -11,13 +11,16 @@ return new class extends Migration {
             $table->id();
 
             // Relationships
-            $table->foreignId('tenant_id')
-                ->constrained('tenants')
+            $table->string('tenant_id');
+            $table->foreign('tenant_id')
+                ->references('id')
+                ->on('tenants')
                 ->onDelete('cascade');
 
-            $table->foreignId('subscription_id')
-                ->nullable()
-                ->constrained('subscriptions')
+            $table->uuid('subscription_id')->nullable();
+            $table->foreign('subscription_id')
+                ->references('id')
+                ->on('subscriptions')
                 ->onDelete('set null');
 
             // Invoice Details

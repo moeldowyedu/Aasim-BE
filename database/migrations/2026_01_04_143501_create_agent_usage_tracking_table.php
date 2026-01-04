@@ -11,8 +11,10 @@ return new class extends Migration {
             $table->id();
 
             // Relationships
-            $table->foreignId('tenant_id')
-                ->constrained('tenants')
+            $table->string('tenant_id');
+            $table->foreign('tenant_id')
+                ->references('id')
+                ->on('tenants')
                 ->onDelete('cascade');
 
             $table->foreignUuid('agent_id')

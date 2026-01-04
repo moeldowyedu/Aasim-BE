@@ -40,6 +40,66 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(\App\Http\Middleware\CompressResponse::class);
         $middleware->append(\App\Http\Middleware\AddTenantHeader::class); // ✅ Added Tenant Header Middleware
     })
+    ->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule): void {
+        // ==========================================
+        // BILLING AUTOMATION JOBS
+        // ==========================================
+    
+        // Process monthly billing (1st of month at midnight)
+        $schedule->job(new \App\Jobs\Billing\ProcessMonthlyBillingJob())
+            ->monthlyOn(1, '00:00')
+            ->timezone('Africa/Cairo')
+            ->name('process-monthly-billing')
+            ->withoutOverlapping()
+            ->onSuccess(function () {
+            \Log::info('Monthly billing job completed successfully');
+        })
+            ->onFailure(function () {
+            \Log::error('Monthly billing job failed');
+        });
+
+        // Renew agent subscriptions (daily at 1 AM)
+        $schedule->job(new \App\Jobs\Billing\RenewAgentSubscriptionsJob())
+            ->dailyAt('01:00')
+            ->timezone('Africa/Cairo')
+            ->name('renew-agent-subscriptions')
+            ->withoutOverlapping();
+
+        // Reset usage quotas (1st of month at 2 AM)
+        $schedule->job(new \App\Jobs\Billing\ResetUsageQuotasJob())
+            ->monthlyOn(1, '02:00')
+            ->timezone('Africa/Cairo')
+            ->name('reset-usage-quotas')
+            ->withoutOverlapping();
+
+        // Send overdue invoice reminders (daily at 10 AM)
+        $schedule->job(new \App\Jobs\Billing\SendOverdueInvoiceRemindersJob())
+            ->dailyAt('10:00')
+            ->timezone('Africa/Cairo')
+            ->name('send-overdue-reminders')
+            ->withoutOverlapping();
+
+        // Retry failed payments (daily at 2 PM)
+        $schedule->job(new \App\Jobs\Billing\RetryFailedPaymentsJob())
+            ->dailyAt('14:00')
+            ->timezone('Africa/Cairo')
+            ->name('retry-failed-payments')
+            ->withoutOverlapping();
+
+        // Handle expired subscriptions (daily at 3 AM)
+        $schedule->job(new \App\Jobs\Billing\HandleExpiredSubscriptionsJob())
+            ->dailyAt('03:00')
+            ->timezone('Africa/Cairo')
+            ->name('handle-expired-subscriptions')
+            ->withoutOverlapping();
+
+        // Cleanup old invoices (monthly on 1st at 4 AM)
+        $schedule->job(new \App\Jobs\Billing\CleanupOldInvoicesJob())
+            ->monthlyOn(1, '04:00')
+            ->timezone('Africa/Cairo')
+            ->name('cleanup-old-invoices')
+            ->withoutOverlapping();
+    })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
     })->create();

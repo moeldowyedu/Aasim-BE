@@ -323,4 +323,14 @@ class Subscription extends Model
     {
         return $query->whereNotNull('cancelled_at');
     }
+
+    /**
+     * Reset monthly usage quota
+     */
+    public function resetMonthlyUsage()
+    {
+        $this->update(['executions_used' => 0]);
+
+        return $this;
+    }
 }

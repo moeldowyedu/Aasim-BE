@@ -35,8 +35,7 @@ class SystemAdminSeeder extends Seeder
             ]
         );
 
-        // Assign Super Admin role with correct guard
-        $role = Role::where('name', $roleName)->where('guard_name', 'console')->first();
+        // Assign Super Admin role (already fetched above with web guard)
         if ($role && !$user->hasRole($role)) {
             $user->assignRole($role);
         }

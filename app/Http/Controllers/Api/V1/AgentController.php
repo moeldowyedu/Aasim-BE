@@ -4,22 +4,81 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
-use App\Models\TenantAgent;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use OpenApi\Annotations as OA;
 
 class AgentController extends Controller
 {
     /**
-     * Get tenant's installed agents.
+     * List all available agents for the tenant.
+     *
+     * @OA\Get(
+     *     path="/api/v1/tenant/agents",
+     *     summary="List available agents",
+     *     description="Get a list of all available agents for the tenant. This is a read-only endpoint.",
+     *     operationId="tenantListAgents",
+     *     tags={"Tenant - Agents"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="category",
+     *         in="query",
+     *         description="Filter by category slug or ID",
+     *         required=false,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Parameter(
+     *         name="search",
+     *         in="query",
+     *         description="Search by agent name or description",
+     *         required=false,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Agents retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="array",
+     *                 @OA\Items(
+     *                     type="object",
+     *                     @OA\Property(property="id", type="string", format="uuid"),
+     *                     @OA\Property(property="name", type="string"),
+     *                     @OA\Property(property="slug", type="string"),
+     *                     @OA\Property(property="description", type="string"),
+     *                     @OA\Property(property="icon_url", type="string"),
+     *                     @OA\Property(property="is_active", type="boolean"),
+     *                     @OA\Property(property="price_model", type="string")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=401, ref="#/components/responses/Unauthorized")
+     * )
      */
     public function index(Request $request): JsonResponse
     {
-        $tenant = $request->user()->tenant;
+        $category = $request->query('category');
+        $search = $request->query('search');
 
-        $agents = $tenant->agents()
-            ->withPivot(['status', 'activated_at', 'usage_count'])
+        $agents = Agent::query()
+            ->where('is_active', true)
+            ->where('is_marketplace', true)
+            ->when($category, function ($query, $category) {
+                return $query->whereHas('categories', function ($q) use ($category) {
+                    $q->where('slug', $category)->orWhere('id', $category);
+                });
+            })
+            ->when($search, function ($query, $search) {
+                return $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%");
+                });
+            })
+            ->with('categories')
+            ->orderBy('name')
             ->get();
 
         return response()->json([
@@ -29,146 +88,63 @@ class AgentController extends Controller
     }
 
     /**
-     * Get specific agent details.
+     * Get specific agent details for the tenant.
+     *
+     * @OA\Get(
+     *     path="/api/v1/tenant/agents/{id}",
+     *     summary="Get agent details",
+     *     description="Get detailed information about a specific agent. This is a read-only endpoint.",
+     *     operationId="tenantShowAgent",
+     *     tags={"Tenant - Agents"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="Agent ID (UUID)",
+     *         required=true,
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Agent details retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="id", type="string", format="uuid"),
+     *                 @OA\Property(property="name", type="string"),
+     *                 @OA\Property(property="slug", type="string"),
+     *                 @OA\Property(property="description", type="string"),
+     *                 @OA\Property(property="long_description", type="string"),
+     *                 @OA\Property(property="icon_url", type="string"),
+     *                 @OA\Property(property="banner_url", type="string"),
+     *                 @OA\Property(property="capabilities", type="array", @OA\Items(type="string")),
+     *                 @OA\Property(property="supported_languages", type="array", @OA\Items(type="string")),
+     *                 @OA\Property(property="price_model", type="string"),
+     *                 @OA\Property(property="base_price", type="number"),
+     *                 @OA\Property(property="is_active", type="boolean"),
+     *                 @OA\Property(property="is_featured", type="boolean"),
+     *                 @OA\Property(property="rating", type="number"),
+     *                 @OA\Property(property="total_installs", type="integer"),
+     *                 @OA\Property(property="categories", type="array", @OA\Items(type="object"))
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=401, ref="#/components/responses/Unauthorized"),
+     *     @OA\Response(response=404, description="Agent not found")
+     * )
      */
     public function show(Request $request, string $id): JsonResponse
     {
-        $tenant = $request->user()->tenant;
-
-        $agent = Agent::findOrFail($id);
-
-        $tenantAgent = TenantAgent::where('tenant_id', $tenant->id)
-            ->where('agent_id', $id)
-            ->first();
+        $agent = Agent::where('is_active', true)
+            ->where('is_marketplace', true)
+            ->with('categories')
+            ->findOrFail($id);
 
         return response()->json([
             'success' => true,
-            'data' => [
-                'agent' => $agent,
-                'installation' => $tenantAgent,
-                'is_installed' => !is_null($tenantAgent),
-            ],
-        ]);
-    }
-
-    /**
-     * Install an agent.
-     */
-    public function install(Request $request, string $id): JsonResponse
-    {
-        $tenant = $request->user()->tenant;
-        $agent = Agent::findOrFail($id);
-
-        // Check if already installed
-        $existing = TenantAgent::where('tenant_id', $tenant->id)
-            ->where('agent_id', $id)
-            ->first();
-
-        if ($existing) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Agent already installed',
-            ], 400);
-        }
-
-        try {
-            $tenantAgent = TenantAgent::create([
-                'tenant_id' => $tenant->id,
-                'agent_id' => $agent->id,
-                'status' => 'active',
-                'purchased_at' => now(),
-                'activated_at' => now(),
-            ]);
-
-            // Increment install count
-            $agent->incrementInstalls();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Agent installed successfully',
-                'data' => $tenantAgent->load('agent'),
-            ], 201);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to install agent',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    /**
-     * Uninstall an agent.
-     */
-    public function uninstall(Request $request, string $id): JsonResponse
-    {
-        $tenant = $request->user()->tenant;
-
-        $tenantAgent = TenantAgent::where('tenant_id', $tenant->id)
-            ->where('agent_id', $id)
-            ->firstOrFail();
-
-        try {
-            $tenantAgent->delete();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Agent uninstalled successfully',
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to uninstall agent',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    /**
-     * Toggle agent status (activate/deactivate).
-     */
-    public function toggleStatus(Request $request, string $id): JsonResponse
-    {
-        $tenant = $request->user()->tenant;
-
-        $tenantAgent = TenantAgent::where('tenant_id', $tenant->id)
-            ->where('agent_id', $id)
-            ->firstOrFail();
-
-        $newStatus = $tenantAgent->status === 'active' ? 'inactive' : 'active';
-
-        $tenantAgent->update(['status' => $newStatus]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Agent status updated',
-            'data' => [
-                'status' => $newStatus,
-            ],
-        ]);
-    }
-
-    /**
-     * Record agent usage.
-     */
-    public function recordUsage(Request $request, string $id): JsonResponse
-    {
-        $tenant = $request->user()->tenant;
-
-        $tenantAgent = TenantAgent::where('tenant_id', $tenant->id)
-            ->where('agent_id', $id)
-            ->where('status', 'active')
-            ->firstOrFail();
-
-        $tenantAgent->incrementUsage();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Usage recorded',
-            'data' => [
-                'usage_count' => $tenantAgent->usage_count,
-                'last_used_at' => $tenantAgent->last_used_at,
-            ],
+            'data' => $agent,
         ]);
     }
 }

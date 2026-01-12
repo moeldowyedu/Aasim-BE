@@ -197,10 +197,16 @@ class OrganizationController extends Controller
 
         $organization->update($data);
 
-        activity()
-            ->performedOn($organization)
-            ->causedBy(auth()->user())
-            ->log('Organization updated');
+        // Log activity - wrapped in try-catch due to potential UUID/bigint mismatch in activity_log table
+        try {
+            activity()
+                ->performedOn($organization)
+                ->causedBy(auth()->user())
+                ->log('Organization updated');
+        } catch (\Exception $e) {
+            // Activity logging failed (likely UUID mismatch), but update succeeded
+            \Log::warning('Activity log failed for organization update: ' . $e->getMessage());
+        }
 
         return new OrganizationResource($organization);
     }

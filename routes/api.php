@@ -323,16 +323,11 @@ Route::middleware([
     });
 
     // =========================================================================
-    // AGENTS (Tenant's Installed Agents)
+    // AGENTS (Tenant's View-Only Access to Agents)
     // =========================================================================
     Route::prefix('agents')->group(function () {
         Route::get('/', [AgentController::class, 'index']);
         Route::get('/{id}', [AgentController::class, 'show']);
-        Route::post('/{id}/install', [AgentController::class, 'install']);
-        Route::delete('/{id}/uninstall', [AgentController::class, 'uninstall']);
-        Route::post('/{id}/toggle-status', [AgentController::class, 'toggleStatus']);
-        Route::post('/{id}/run', [AgentExecutionController::class, 'run']);
-        Route::post('/{id}/record-usage', [AgentController::class, 'recordUsage']);
     });
 
     // =========================================================================
@@ -548,15 +543,11 @@ Route::prefix('v1')->middleware([
 
         Route::get('/subscription-plans/recommendations', [SubscriptionPlanController::class, 'recommendations']);
 
-        // Legacy agents
+
+        // Legacy agents (GET-only)
         Route::prefix('agents')->group(function () {
             Route::get('/', [AgentController::class, 'index']);
             Route::get('/{id}', [AgentController::class, 'show']);
-            Route::post('/{id}/install', [AgentController::class, 'install']);
-            Route::delete('/{id}/uninstall', [AgentController::class, 'uninstall']);
-            Route::post('/{id}/toggle-status', [AgentController::class, 'toggleStatus']);
-            Route::post('/{id}/record-usage', [AgentController::class, 'recordUsage']);
-            Route::post('/{id}/run', [AgentExecutionController::class, 'run']);
         });
 
         Route::prefix('agent-runs')->group(function () {

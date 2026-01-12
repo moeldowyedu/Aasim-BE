@@ -34,6 +34,20 @@ class AgentController extends Controller
      *         required=false,
      *         @OA\Schema(type="string")
      *     ),
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         description="Page number for pagination",
+     *         required=false,
+     *         @OA\Schema(type="integer", default=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="per_page",
+     *         in="query",
+     *         description="Number of items per page",
+     *         required=false,
+     *         @OA\Schema(type="integer", default=12)
+     *     ),
      *     @OA\Response(
      *         response=200,
      *         description="Agents retrieved successfully",
@@ -41,17 +55,11 @@ class AgentController extends Controller
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(
      *                 property="data",
-     *                 type="array",
-     *                 @OA\Items(
-     *                     type="object",
-     *                     @OA\Property(property="id", type="string", format="uuid"),
-     *                     @OA\Property(property="name", type="string"),
-     *                     @OA\Property(property="slug", type="string"),
-     *                     @OA\Property(property="description", type="string"),
-     *                     @OA\Property(property="icon_url", type="string"),
-     *                     @OA\Property(property="is_active", type="boolean"),
-     *                     @OA\Property(property="price_model", type="string")
-     *                 )
+     *                 type="object",
+     *                 @OA\Property(property="current_page", type="integer"),
+     *                 @OA\Property(property="data", type="array", @OA\Items(type="object")),
+     *                 @OA\Property(property="total", type="integer"),
+     *                 @OA\Property(property="per_page", type="integer")
      *             )
      *         )
      *     ),
@@ -62,10 +70,10 @@ class AgentController extends Controller
     {
         $category = $request->query('category');
         $search = $request->query('search');
+        $perPage = (int) $request->query('per_page', 12);
 
         $agents = Agent::query()
-            ->where('is_active', true)
-            ->where('is_marketplace', true)
+            ->active()
             ->when($category, function ($query, $category) {
                 return $query->whereHas('categories', function ($q) use ($category) {
                     $q->where('slug', $category)->orWhere('id', $category);
@@ -78,8 +86,9 @@ class AgentController extends Controller
                 });
             })
             ->with('categories')
+            ->orderBy('is_featured', 'desc')
             ->orderBy('name')
-            ->get();
+            ->paginate($perPage);
 
         return response()->json([
             'success' => true,
@@ -137,8 +146,7 @@ class AgentController extends Controller
      */
     public function show(Request $request, string $id): JsonResponse
     {
-        $agent = Agent::where('is_active', true)
-            ->where('is_marketplace', true)
+        $agent = Agent::active()
             ->with('categories')
             ->findOrFail($id);
 

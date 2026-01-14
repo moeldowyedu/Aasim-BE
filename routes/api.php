@@ -96,11 +96,25 @@ Route::prefix('v1/marketplace')->group(function () {
 });
 
 // =============================================================================
-// PUBLIC SUBSCRIPTION PLANS (Pricing Page)
+// PUBLIC SUBSCRIPTION PLANS (Pricing Page) - DEPRECATED
 // =============================================================================
+// DEPRECATED: Use /api/v1/pricing/plans instead (Phase 5)
+// These routes are maintained for backward compatibility only
 Route::prefix('v1')->group(function () {
-    Route::get('/subscription-plans', [SubscriptionPlanController::class, 'index']);
-    Route::get('/subscription-plans/{id}', [SubscriptionPlanController::class, 'show']);
+    Route::get('/subscription-plans', [SubscriptionPlanController::class, 'index'])
+        ->middleware(function ($request, $next) {
+            $response = $next($request);
+            $response->header('X-API-Deprecated', 'true');
+            $response->header('X-API-Deprecation-Info', 'Use /api/v1/pricing/plans instead. This endpoint will be removed in v2.0');
+            return $response;
+        });
+    Route::get('/subscription-plans/{id}', [SubscriptionPlanController::class, 'show'])
+        ->middleware(function ($request, $next) {
+            $response = $next($request);
+            $response->header('X-API-Deprecated', 'true');
+            $response->header('X-API-Deprecation-Info', 'Use /api/v1/pricing/plans/{id} instead. This endpoint will be removed in v2.0');
+            return $response;
+        });
 });
 
 // =============================================================================
@@ -418,6 +432,7 @@ Route::middleware([
 Route::prefix('v1/pricing')->group(function () {
     // Subscription Plans
     Route::get('/plans', [App\Http\Controllers\Api\SubscriptionController::class, 'plans']);
+    Route::get('/plans/{id}', [SubscriptionPlanController::class, 'show']); // Individual plan details
 
     // Agent Marketplace (Public Catalog)
     Route::get('/agents/marketplace', [App\Http\Controllers\Api\AgentMarketplaceController::class, 'publicCatalog']);

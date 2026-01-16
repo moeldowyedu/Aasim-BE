@@ -25,6 +25,24 @@ class TenantMembership extends Model
     public $incrementing = false;
 
     /**
+     * Get the value of the model's primary key.
+     *
+     * @return mixed
+     */
+    public function getKey()
+    {
+        if (is_array($this->primaryKey)) {
+            $keys = [];
+            foreach ($this->primaryKey as $key) {
+                $keys[$key] = $this->getAttribute($key);
+            }
+            return $keys;
+        }
+
+        return parent::getKey();
+    }
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>

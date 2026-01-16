@@ -13,6 +13,8 @@ return [
                  * Route for accessing api documentation interface
                  */
                 'api' => 'api/documentation',
+                'docs' => 'docs',
+                'oauth2_callback' => 'api/oauth2-callback/default',
             ],
             'paths' => [
                 /*
@@ -56,6 +58,8 @@ return [
 
             'routes' => [
                 'api' => 'api/documentation/admin',
+                'docs' => 'docs/admin',
+                'oauth2_callback' => 'api/oauth2-callback/admin',
             ],
             'paths' => [
                 'use_absolute_path' => env('L5_SWAGGER_USE_ABSOLUTE_PATH', true),
@@ -78,6 +82,8 @@ return [
 
             'routes' => [
                 'api' => 'api/documentation/tenant',
+'oauth2_callback' => 'api/oauth2-callback/tenant',
+                'docs' => 'docs/tenant',
             ],
             'paths' => [
                 'use_absolute_path' => env('L5_SWAGGER_USE_ABSOLUTE_PATH', true),
@@ -110,7 +116,7 @@ return [
             /*
              * Route for Oauth2 authentication callback.
              */
-            'oauth2_callback' => 'api/oauth2-callback',
+            'oauth2_callback' => 'api/oauth2-callback/default',
 
             /*
              * Middleware allows to prevent unexpected access to API documentation

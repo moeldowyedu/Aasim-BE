@@ -127,9 +127,11 @@
 
         @foreach($urlsToDocs as $title => $url)
             @php
-                // Fix URL: if it contains ?filename, convert to /filename
-                $fixedUrl = preg_replace('/\?([^&]+\.json)$/', '/$1', $url);
-                $fixedUrl = preg_replace('/\?([^&]+\.yaml)$/', '/$1', $fixedUrl);
+                // Fix URL: L5-Swagger route returns JSON directly, so we need to remove the filename
+                // Convert /docs?api-docs.json or /docs/api-docs.json to just /docs
+                // Convert /docs/admin?admin-api-docs.json or /docs/admin/admin-api-docs.json to /docs/admin
+                $fixedUrl = preg_replace('/\?[^\/]+\.(json|yaml)$/', '', $url);
+                $fixedUrl = preg_replace('/\/[^\/]+\.(json|yaml)$/', '', $fixedUrl);
             @endphp
             urls.push({name: "{{ $title }}", url: "{{ $fixedUrl }}"});
         @endforeach

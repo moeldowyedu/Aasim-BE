@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Tymon\JWTAuth\Facades\JWTAuth;
+use App\Models\SubscriptionPlan;
 
 class AuthController extends Controller
 {
@@ -120,6 +121,11 @@ class AuthController extends Controller
                 // Generate TEMPORARY tenant ID
                 $tempTenantId = 'pending-' . Str::random(20);
 
+                // Get the plan to determine trial days
+                $plan = SubscriptionPlan::findOrFail($request->plan_id);
+                $trialDays = $plan->trial_days ?? 14; // Default to 14 days if not set
+                $trialEndsAt = now()->addDays($trialDays);
+
                 // Step 1: Create Tenant (PENDING STATUS) - Always Organization
                 $tenantData = [
                     'id' => $tempTenantId, // Temporary ID, will change after verification
@@ -129,9 +135,8 @@ class AuthController extends Controller
                     'type' => 'organization', // Hardcoded
                     'status' => 'pending_verification', // ⚠️ IMPORTANT
                     'plan_id' => $request->plan_id, // Store selected plan
-                    'data' => [
-                        'billing_cycle' => $request->billing_cycle, // Store billing cycle preference
-                    ],
+                    'billing_cycle' => $request->billing_cycle, // Store billing cycle
+                    'data' => [],
                 ];
 
                 $tenant = Tenant::create($tenantData);
@@ -165,7 +170,7 @@ class AuthController extends Controller
                     'phone' => $request->phone,
                     'country' => $request->country,
                     'status' => 'pending_verification', // ⚠️ IMPORTANT
-                    'trial_ends_at' => now()->addDays(7),
+                    'trial_ends_at' => $trialEndsAt,
                 ]);
 
                 // Step 4: Create Membership

@@ -22,6 +22,8 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         'status',
         'subdomain_preference',
         'subdomain_activated_at',
+        'plan_id',
+        'billing_cycle',
     ];
 
     public static function getCustomColumns(): array

@@ -19,12 +19,36 @@ class PricingSeeder extends Seeder
 
         $this->command->info('🗑️  Clearing existing pricing data...');
 
-        // Disable foreign key checks temporarily
-        DB::statement('SET CONSTRAINTS ALL DEFERRED');
+        // Check for existing subscriptions
+        $subscriptionsCount = DB::table('subscriptions')->count();
 
-        // Delete in correct order (child first, then parent)
-        DB::table('subscription_plans')->delete();
-        DB::table('billing_cycles')->delete();
+        if ($subscriptionsCount > 0) {
+            $this->command->warn("⚠️  Found {$subscriptionsCount} existing subscriptions in the database.");
+
+            if (!$this->command->confirm('This will DELETE ALL SUBSCRIPTIONS. Are you sure you want to continue?', false)) {
+                $this->command->error('❌ Seeding aborted. Subscriptions were not deleted.');
+                return;
+            }
+
+            $this->command->info('Deleting subscriptions...');
+            DB::table('subscriptions')->delete();
+            $this->command->info("✅ Deleted {$subscriptionsCount} subscriptions");
+        }
+
+        // Delete in correct order (child tables first, then parent)
+        // 1. Delete subscription_plans (child of billing_cycles)
+        $plansCount = DB::table('subscription_plans')->count();
+        if ($plansCount > 0) {
+            DB::table('subscription_plans')->delete();
+            $this->command->info("✅ Deleted {$plansCount} subscription plans");
+        }
+
+        // 2. Delete billing_cycles (parent table)
+        $cyclesCount = DB::table('billing_cycles')->count();
+        if ($cyclesCount > 0) {
+            DB::table('billing_cycles')->delete();
+            $this->command->info("✅ Deleted {$cyclesCount} billing cycles");
+        }
 
         // Reset auto-increment for billing_cycles
         DB::statement('ALTER SEQUENCE billing_cycles_id_seq RESTART WITH 1');
